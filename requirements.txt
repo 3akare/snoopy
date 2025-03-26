@@ -1,0 +1,9 @@
+tensorflow
+torch
+transformers
+onnxruntime
+onnx
+sentencepiece
+flask
+grpcio
+grpcio-tools
