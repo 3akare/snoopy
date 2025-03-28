@@ -112,6 +112,7 @@
 
 @layer base {
   * {
+    font-family: "Montserrat", "sans-serif";
     @apply border-border outline-ring/50;
   }
   body {

@@ -4,11 +4,11 @@ import {
     AvatarImage,
 } from "@/components/ui/avatar"
 
-export default function Profile() {
+export default function Profile({src, alt, fallback}) {
     return (
         <Avatar>
-            <AvatarImage src="https://github.com/shadcn.png" alt="@snoopy" />
-            <AvatarFallback>CN</AvatarFallback>
+            <AvatarImage src={src} alt={alt} />
+            <AvatarFallback className={"bg-emerald-600 text-white"}>{fallback}</AvatarFallback>
         </Avatar>
     )
 }
