@@ -1,0 +1,16 @@
+# Project specific
+README.md
+
+# Node
+node_modules/
+dist/
+
+# Git
+.git/
+.gitignore
+
+# Docker specific
+Dockerfile
+docker-compose.yml
+.dockerignore
+
