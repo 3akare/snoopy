@@ -1,0 +1,19 @@
+# Project specific
+proto/
+README.md
+
+# Python
+__pycache__/
+venv/
+*.pyc
+*.pyo
+*.pyd
+
+# Git
+.git/
+.gitignore
+
+# Docker-specific
+Dockerfile
+docker-compose.yml
+.dockerignore
