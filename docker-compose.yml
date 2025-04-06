@@ -12,5 +12,13 @@ services:
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=False
+  nlp:
+    build: ./nlp
+    ports:
+      - "50051:50051"
+  lstm:
+    build: ./lstm
+    ports:
+      - "50052:50052"
 volumes:
   snoopy:
