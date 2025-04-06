@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package signData;
+
+message RequestMessage {
+  string data = 1;
+}
+
+message ResponseMessage {
+  string reply = 1;
+}
+
+service StreamDataService {
+  rpc biDirectionalStream (RequestMessage) returns (ResponseMessage);
+}
