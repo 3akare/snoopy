@@ -19,9 +19,9 @@ class StreamDataService(sign_data_pb2_grpc.StreamDataServiceServicer):
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     sign_data_pb2_grpc.add_StreamDataServiceServicer_to_server(StreamDataService(), server)
-    server.add_insecure_port("[::]:50052")
+    server.add_insecure_port("[::]:50051")
     server.start()
-    logging.info("Server started on port 50052")
+    logging.info("Server started on port 50051")
     server.wait_for_termination()
 
 if __name__ == "__main__":

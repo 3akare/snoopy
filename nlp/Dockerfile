@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM tensorflow/tensorflow:2.16.2
 
 WORKDIR /app
 
@@ -8,6 +8,6 @@ RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-EXPOSE 50051
+EXPOSE 50052
 
 CMD ["python", "-u", "app.py"]

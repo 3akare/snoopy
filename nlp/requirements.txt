@@ -1,4 +1,4 @@
-tensorflow==2.16.2
+# tensorflow==2.16.2
 torch==2.2.2
 transformers==4.50.1
 onnxruntime==1.21.0

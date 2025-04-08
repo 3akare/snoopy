@@ -13,8 +13,8 @@ app.config['DEBUG'] = debug_mode
 
 CORS(app)
 
-@app.route('/nlp', methods=['POST'])
-def nlp():
+@app.route('/lstm', methods=['POST'])
+def lstm():
     data = request.get_json()  # Ensure JSON parsing
     query = data.get("query", "Default message")  # Extract 'query' safely
     with grpc.insecure_channel("localhost:50051") as channel:
@@ -22,10 +22,11 @@ def nlp():
         # Send the query as a string in RequestMessage
         request_message = sign_data_pb2.RequestMessage(data=query)
         response = stub.biDirectionalStream(request_message)
-        return f"[nlp] {response.reply}"
+        return f"[lstm] {response.reply}"
 
-@app.route('/lstm', methods=['POST'])
-def lstm():
+
+@app.route('/nlp', methods=['POST'])
+def nlp():
     data = request.get_json()  # Ensure JSON parsing
     query = data.get("query", "Default message")  # Extract 'query' safely
     with grpc.insecure_channel("localhost:50052") as channel:
@@ -33,7 +34,7 @@ def lstm():
         # Send the query as a string in RequestMessage
         request_message = sign_data_pb2.RequestMessage(data=query)
         response = stub.biDirectionalStream(request_message)
-        return f"[lstm] {response.reply}"
+        return f"[nlp] {response.reply}"
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", debug=debug_mode, port=3000)
