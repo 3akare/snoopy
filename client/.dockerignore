@@ -4,6 +4,7 @@ README.md
 # Node
 node_modules/
 dist/
+.next
 
 # Git
 .git/

@@ -6,16 +6,17 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 COPY package*.json ./
+
 RUN pnpm install
 
 COPY . .
+
 RUN pnpm run build
 
 # Production stage
 FROM nginx:alpine
 
-# Copy built app to Nginx html dir
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/out /usr/share/nginx/html
 
 EXPOSE 80
 
