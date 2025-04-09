@@ -1,4 +1,8 @@
-flask==3.1.0
-flask-cors==5.0.1
-grpcio==1.71.0
+flask~=3.1.0
+flask-cors~=5.0.1
+grpcio~=1.71.0
 grpcio-tools
+opencv-python~=4.7.0.72
+mediapipe~=0.10.21
+protobuf~=3.20.0
+numpy~=1.26.4
