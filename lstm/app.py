@@ -8,7 +8,8 @@ import sign_data_lstm_pb2
 import sign_data_lstm_pb2_grpc
 from concurrent import futures
 
-ACTIONS = ["hello", "thanks", "iloveyou"]
+MAX_MESSAGE_LENGTH = 100 * 1024 * 1024
+ACTIONS = ["hello", "thanks", "i love you"]
 label_map = {i: action for i, action in enumerate(ACTIONS)}
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'model.h5')
@@ -49,7 +50,9 @@ class StreamDataService(sign_data_lstm_pb2_grpc.StreamDataServiceServicer):
         return sign_data_lstm_pb2.ResponseMessage(reply=response_text)
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), 
+    options=[('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),('grpc.max_send_message_length', MAX_MESSAGE_LENGTH)])
+
     sign_data_lstm_pb2_grpc.add_StreamDataServiceServicer_to_server(StreamDataService(), server)
     server.add_insecure_port("[::]:50051")
     server.start()
