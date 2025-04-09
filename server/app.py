@@ -12,6 +12,9 @@ app = Flask(__name__)
 
 # Get the environment variable for debug mode
 debug_mode = os.getenv('FLASK_DEBUG', 'False') == 'True'
+lstm_host = os.getenv("LSTM_HOST", "localhost:50051")
+nlp_host = os.getenv("NLP_HOST", "localhost:50052")
+
 app.config['DEBUG'] = debug_mode
 
 CORS(app)
@@ -20,7 +23,7 @@ CORS(app)
 def lstm():
     data = request.get_json()  # Ensure JSON parsing
     query = data.get("query", "Default message")  # Extract 'query' safely
-    with grpc.insecure_channel("localhost:50051") as channel:
+    with grpc.insecure_channel(lstm_host) as channel:
         stub = sign_data_lstm_pb2_grpc.StreamDataServiceStub(channel)
         # Send the query as a string in RequestMessage
         request_message = sign_data_lstm_pb2.RequestMessage(data=[])
@@ -32,7 +35,7 @@ def lstm():
 def nlp():
     data = request.get_json()  # Ensure JSON parsing
     query = data.get("query", "Default message")  # Extract 'query' safely
-    with grpc.insecure_channel("localhost:50052") as channel:
+    with grpc.insecure_channel(nlp_host) as channel:
         stub = sign_data_nlp_pb2_grpc.StreamDataServiceStub(channel)
         # Send the query as a string in RequestMessage
         request_message = sign_data_nlp_pb2.RequestMessage(data=query)
