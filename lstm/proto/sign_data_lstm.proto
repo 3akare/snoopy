@@ -1,9 +1,13 @@
 syntax = "proto3";
 
-package signData;
+package signDataLSTM;
+
+message Gesture {
+  repeated float points = 1;
+}
 
 message RequestMessage {
-  string data = 1;
+  repeated Gesture data = 1;
 }
 
 message ResponseMessage {

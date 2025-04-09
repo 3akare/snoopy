@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package signData;
+package signDataNLP;
 
 message RequestMessage {
   string data = 1;

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package signDataLSTM;
+
+message Gesture {
+  repeated float points = 1;
+}
+
+message RequestMessage {
+  repeated Gesture data = 1;
+}
+
+message ResponseMessage {
+  string reply = 1;
+}
+
+service StreamDataService {
+  rpc biDirectionalStream (RequestMessage) returns (ResponseMessage);
+}

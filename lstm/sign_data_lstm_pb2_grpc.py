@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import sign_data_pb2 as sign__data__pb2
+import sign_data_lstm_pb2 as sign__data__lstm__pb2
 
 
 class StreamDataServiceStub(object):
@@ -15,9 +15,9 @@ class StreamDataServiceStub(object):
             channel: A grpc.Channel.
         """
         self.biDirectionalStream = channel.unary_unary(
-                '/signData.StreamDataService/biDirectionalStream',
-                request_serializer=sign__data__pb2.RequestMessage.SerializeToString,
-                response_deserializer=sign__data__pb2.ResponseMessage.FromString,
+                '/signDataLSTM.StreamDataService/biDirectionalStream',
+                request_serializer=sign__data__lstm__pb2.RequestMessage.SerializeToString,
+                response_deserializer=sign__data__lstm__pb2.ResponseMessage.FromString,
                 )
 
 
@@ -35,12 +35,12 @@ def add_StreamDataServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'biDirectionalStream': grpc.unary_unary_rpc_method_handler(
                     servicer.biDirectionalStream,
-                    request_deserializer=sign__data__pb2.RequestMessage.FromString,
-                    response_serializer=sign__data__pb2.ResponseMessage.SerializeToString,
+                    request_deserializer=sign__data__lstm__pb2.RequestMessage.FromString,
+                    response_serializer=sign__data__lstm__pb2.ResponseMessage.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'signData.StreamDataService', rpc_method_handlers)
+            'signDataLSTM.StreamDataService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
@@ -59,8 +59,8 @@ class StreamDataService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/signData.StreamDataService/biDirectionalStream',
-            sign__data__pb2.RequestMessage.SerializeToString,
-            sign__data__pb2.ResponseMessage.FromString,
+        return grpc.experimental.unary_unary(request, target, '/signDataLSTM.StreamDataService/biDirectionalStream',
+            sign__data__lstm__pb2.RequestMessage.SerializeToString,
+            sign__data__lstm__pb2.ResponseMessage.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
