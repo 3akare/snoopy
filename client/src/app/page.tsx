@@ -60,7 +60,7 @@ export default function Home() {
       try {
         const formData = new FormData();
         formData.append("video", recordedBlobRef.current, "recording.webm");
-        const res = await fetch("http://localhost:3000/upload", {
+        const res = await fetch("http://localhost:8080/upload", {
           method: "POST",
           body: formData,
         });

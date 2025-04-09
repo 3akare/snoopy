@@ -1,6 +1,7 @@
 # Project specific
 proto/
 README.md
+uploads/
 
 # Python
 __pycache__/
