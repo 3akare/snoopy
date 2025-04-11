@@ -5,6 +5,8 @@ services:
     build: ./client
     ports:
       - "80:80"
+    networks:
+      - snoopy-network
   server:
     build: ./server
     ports:
