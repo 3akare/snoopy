@@ -2,5 +2,6 @@ export type RecorderState = "default" | "recording" | "ready" | "loading" | "err
 
 export interface RecorderProps {
     onReset: () => void;
+    onRetry: () => void;
     state: RecorderState;
 }

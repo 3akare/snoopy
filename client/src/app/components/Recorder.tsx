@@ -2,7 +2,7 @@ import {RecorderProps} from "@/app/types/RecorderProps";
 import {Loader2} from "lucide-react";
 import {forwardRef} from "react";
 
-const Recorder = forwardRef<HTMLDivElement, RecorderProps>(({onReset, state,}, ref) => {
+const Recorder = forwardRef<HTMLDivElement, RecorderProps>(({onReset, onRetry, state}, ref) => {
     return (
         <div ref={ref} className="flex flex-col items-center justify-center h-full">
             {state === "default" && (
@@ -40,7 +40,12 @@ const Recorder = forwardRef<HTMLDivElement, RecorderProps>(({onReset, state,}, r
                 <div className="flex flex-col items-center justify-center h-full">
                     <div className="text-center">
                    <p className="text-red-400 text-xl mb-2">An error occurred</p>
-                     <div className="flex gap-2 justify-center">
+                     <div className="flex gap-4 justify-center">
+                    <button
+                    onClick={onRetry}
+                    className="px-4 py-2 bg-green-400/30 text-green-400 rounded-md text-sm hover:bg-green-400/50"
+                    > Retry
+                    </button>
                     <button
                     onClick={onReset}
                     className="px-4 py-2 bg-red-900/30 text-red-400 rounded-md text-sm hover:bg-red-900/50"

@@ -175,6 +175,7 @@ export default function Home() {
                   <Recorder
                       state={state}
                       onReset={() => setState("default")}
+                      onRetry={() => setState("ready")}
                   />
               ) : (
                   <TextDisplay
