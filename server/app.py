@@ -27,7 +27,7 @@ logging.basicConfig(
     stream=sys.stdout
 )
 
-MAX_MESSAGE_LENGTH = 100 * 1024 * 1024
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 SEQUENCE_LENGTH = 30
 HOLISTIC = mp.solutions.holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 

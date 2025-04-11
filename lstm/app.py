@@ -8,7 +8,7 @@ import sign_data_lstm_pb2
 import sign_data_lstm_pb2_grpc
 from concurrent import futures
 
-MAX_MESSAGE_LENGTH = 100 * 1024 * 1024
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 ACTIONS = ["hello", "thanks", "i love you"]
 label_map = {i: action for i, action in enumerate(ACTIONS)}
 

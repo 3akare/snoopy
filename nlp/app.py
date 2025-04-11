@@ -12,7 +12,7 @@ logging.basicConfig(
     stream=sys.stdout
 )
 
-MAX_MESSAGE_LENGTH = 100 * 1024 * 1024
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 
 class StreamDataService(sign_data_nlp_pb2_grpc.StreamDataServiceServicer):
     def biDirectionalStream(self, request, context):
