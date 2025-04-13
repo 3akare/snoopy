@@ -30,6 +30,8 @@ services:
       - "50052:50052"
     networks:
       - snoopy-network
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY} 
 volumes:
   snoopy:
 networks:
