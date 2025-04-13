@@ -1,11 +1,13 @@
+from concurrent import futures
+from dotenv import load_dotenv
+from model.refine_text import refine_text
 import sys
 import grpc
 import logging
 import sign_data_nlp_pb2
 import sign_data_nlp_pb2_grpc
-from concurrent import futures
-from model.refine_text import refine_text
 
+load_dotenv()
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO,
