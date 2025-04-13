@@ -1,7 +1,4 @@
-torch==2.2.2
-transformers>=4.27.0
-onnxruntime==1.21.0
-onnx==1.17.0
-sentencepiece==0.2.0
+google-genai==1.10.0
 grpcio==1.71.0
 grpcio-tools
+python-dotenv
