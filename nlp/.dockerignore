@@ -1,20 +1,17 @@
-# Project specific
+# Project-specific
 proto/
 README.md
 .env
 
 # Python
 __pycache__/
+*.py[cod]
 venv/
-*.pyc
-*.pyo
-*.pyd
 
 # Git
 .git/
-.gitignore
 
-# Docker specific
+# Docker
 Dockerfile
 docker-compose.yml
 .dockerignore
