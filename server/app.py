@@ -1,7 +1,6 @@
 from utils.gesture_utils import process_video
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-
 import os
 import sys
 import grpc
@@ -33,6 +32,7 @@ HOLISTIC = mp.solutions.holistic.Holistic(min_detection_confidence=0.5, min_trac
 
 @app.route("/upload", methods=["POST"])
 def upload():
+    logging.info("Video received\nProcessing...")
     video = request.files.get("video")
     if not video or video.filename == '':
         return jsonify({"error": "No file uploaded"}), 400
@@ -59,7 +59,7 @@ def upload():
             stub = sign_data_nlp_pb2_grpc.StreamDataServiceStub(channel)
             request_message = sign_data_nlp_pb2.RequestMessage(data=translated_text)
             response = stub.biDirectionalStream(request_message)
-            logging.info(f"[nlp] {response.reply}")
+            logging.info(f"[nlp] {response.reply}\nDone.")
             return jsonify({"translatedText": response.reply})
 
 if __name__ == '__main__':

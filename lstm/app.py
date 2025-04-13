@@ -1,3 +1,4 @@
+from concurrent import futures
 import os
 import sys
 import logging
@@ -6,7 +7,6 @@ import numpy as np
 import tensorflow as tf
 import sign_data_lstm_pb2
 import sign_data_lstm_pb2_grpc
-from concurrent import futures
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 ACTIONS = ["hello", "thanks", "i love you"]

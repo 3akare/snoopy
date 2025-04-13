@@ -1,6 +1,7 @@
 # Project specific
 proto/
 README.md
+.env
 
 # Python
 __pycache__/
