@@ -23,41 +23,42 @@ logging.basicConfig(
 
 class StreamDataService(sign_data_lstm_pb2_grpc.StreamDataServiceServicer):
     def biDirectionalStream(self, request, context):
-        # logging.info(f"Received request data: {request.data}")
         print(f"Received request data: {request.data}")
         try:
             sequences = []
             for gesture in request.data:
-                # Each gesture.points is a flattened sequence.
                 total_length = len(gesture.points)
-                sequence_length = 30  # Must match your capture
+                sequence_length = 30
                 feature_size = total_length // sequence_length
                 sequence = np.array(gesture.points).reshape((sequence_length, feature_size))
                 sequences.append(sequence)
-            
+
             if not sequences:
                 return sign_data_lstm_pb2.ResponseMessage(reply="No gesture data received")
-            
+
             sequences = np.array(sequences)
             predictions = model.predict(sequences)
             predicted_actions = [label_map[int(np.argmax(pred))] for pred in predictions]
             response_text = " ".join(predicted_actions)
-            # logging.info(f"Processed response: {response_text}")
             print(f"Processed response: {response_text}")
             return sign_data_lstm_pb2.ResponseMessage(reply=response_text)
+
         except Exception as e:
-            print(f"Error in biDirectionalStream: {e}")
-        return sign_data_lstm_pb2.ResponseMessage(reply=response_text)
+            logging.error(f"Error in biDirectionalStream: {e}")
+            return sign_data_lstm_pb2.ResponseMessage(reply="Error processing gesture")
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), 
-    options=[('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),('grpc.max_send_message_length', MAX_MESSAGE_LENGTH)])
-
+    server = grpc.server(
+        futures.ThreadPoolExecutor(max_workers=10),
+        options=[
+            ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),
+            ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH)
+        ]
+    )
     sign_data_lstm_pb2_grpc.add_StreamDataServiceServicer_to_server(StreamDataService(), server)
     server.add_insecure_port("[::]:50051")
-    server.start()
-    # logging.info("Server started on port 50051")
     print("Server started on port 50051")
+    server.start()
     server.wait_for_termination()
 
 if __name__ == "__main__":
