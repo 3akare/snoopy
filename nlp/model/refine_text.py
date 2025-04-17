@@ -12,19 +12,17 @@ def refine_text(text):
     logging.info(f"Received text: {text}")
     
     prompt_text = textwrap.dedent(f"""
-    You are a grammar and coherence correction tool. You will receive text generated from a Bi-LSTM model trained on Nigerian Sign Language gestures. This text may include unnecessary repetitions, poor grammar, and structural inconsistencies.
-    Your task is to:
-    1. Correct grammatical errors and ensure the sentence is well-structured.
-    2. Remove unnecessary repetitions, especially if the same phrase or word appears multiple times in a row (e.g., "I love you I love you" should become "I love you").
-    3. Preserve the original intent and meaning of the sentence, even if grammar or vocabulary is limited.
-    4. If the input is a sequence of unrelated or partial words (e.g., "Name Hello Water My"), reconstruct them into the most logical, natural-sounding, and grammatically correct sentence based on the available vocabulary.
-    5. Do not fabricate meaning beyond what the words suggest, but feel free to reorder or slightly rephrase for better clarity.
-
-    Vocabulary list for reference:
-    book, Thank, You, Water, Hello, Food, My, Goodbye, School, Name, Good Afternoon, Book, David, Nigeria, Understand, And, Sign Language, This, Table, Final, Chair, Year, Laptop, Presentation, Friend.
-
-    Here is the text: {text}
-    """)
+    You are a specialized text correction and interpretation engine designed for processing raw outputs from a Bi-LSTM model trained on Nigerian Sign Language (NSL) gestures. The output may include repeated words, poor grammar, fragmented phrases, or disordered sequences due to the nature of gesture recognition.
+    Your task is to intelligently clean, correct, and reconstruct the input text into a coherent, grammatically correct English sentence while preserving the intended meaning of the original gestures as much as possible.
+    Follow these instructions precisely:
+    Correct grammar and structure: Fix all grammatical errors and make sure the sentence reads naturally in English.
+    Remove repetitions: Eliminate any unnecessary repeated words or phrases (e.g., "Thank Thank You You" → "Thank You").
+    Reconstruct logical meaning: If the input is a disorganized set of partial or isolated gesture words (e.g., "Hello Name Water"), infer and rearrange them into the most logical sentence based on meaning and common usage.
+    Preserve intent: Do not invent or add extra meaning beyond what the gestures imply. Only reorder or slightly rephrase to improve clarity.
+    Respect vocabulary scope: Stick strictly to the vocabulary provided. If a word is outside the scope, ignore or discard it. Do not translate slang or out-of-vocabulary terms.
+    Vocabulary Reference (use only these words and their combinations to infer meaning):
+    A-Z, Notebook, Thank You, Water, Hello, Food, My, Goodbye, School, Name, Good Afternoon, Book, Friend, Country, Understand, And, Sign Language, This, Table, Final, Chair, Year, Computer, Talk, Friend
+    Input (raw Bi-LSTM output): {text}""")
 
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
