@@ -19,9 +19,9 @@ def refine_text(text):
     Remove repetitions: Eliminate any unnecessary repeated words or phrases (e.g., "Thank Thank You You" → "Thank You").
     Reconstruct logical meaning: If the input is a disorganized set of partial or isolated gesture words (e.g., "Hello Name Water"), infer and rearrange them into the most logical sentence based on meaning and common usage.
     Preserve intent: Do not invent or add extra meaning beyond what the gestures imply. Only reorder or slightly rephrase to improve clarity.
-    Respect vocabulary scope: Stick strictly to the vocabulary provided. If a word is outside the scope, ignore or discard it. Do not translate slang or out-of-vocabulary terms.
-    Vocabulary Reference (use only these words and their combinations to infer meaning):
-    A-Z, Notebook, Thank You, Water, Hello, Food, My, Goodbye, School, Name, Good Afternoon, Book, Friend, Country, Understand, And, Sign Language, This, Table, Final, Chair, Year, Computer, Talk, Friend
+    Respect vocabulary scope: Stick strictly to the vocabulary provided.
+    Vocabulary Reference:
+    A-Z, Notebook, Thank You, Water, I love you, Hello, Food, My, Goodbye, School, Name, Good Afternoon, Book, Friend, Country, Understand, And, Sign Language, This, Table, Final, Chair, Year, Computer, Talk, Friend and more... just make it make sense
     Input (raw Bi-LSTM output): {text}""")
 
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
