@@ -13,7 +13,10 @@ ACTIONS = ["hello", "thanks", "i love you"]
 label_map = {i: action for i, action in enumerate(ACTIONS)}
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'model.h5')
-model = tf.keras.models.load_model(MODEL_PATH)
+try:
+    model = tf.keras.models.load_model(MODEL_PATH)
+except Exception as e:
+    logging.error(f"Error loading model: {e}")
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -23,20 +26,42 @@ logging.basicConfig(
 
 class StreamDataService(sign_data_lstm_pb2_grpc.StreamDataServiceServicer):
     def biDirectionalStream(self, request, context):
-        print(f"Received request data: {request.data}")
+        print(f"Received request with {len(request.data)} gestures.")
         try:
-            sequences = []
-            for gesture in request.data:
-                total_length = len(gesture.points)
-                sequence_length = 30
-                feature_size = total_length // sequence_length
-                sequence = np.array(gesture.points).reshape((sequence_length, feature_size))
-                sequences.append(sequence)
-
-            if not sequences:
+            if not request.data:
+                print("No gesture data received")
                 return sign_data_lstm_pb2.ResponseMessage(reply="No gesture data received")
 
-            sequences = np.array(sequences)
+            num_gestures = len(request.data)
+            sequence_length = 30
+            all_points_flat = []
+            feature_size = None
+            total_points_per_gesture = None
+
+            if not request.data[0].points:
+                logging.error("Invalid gesture data: First gesture has no points.")
+                return sign_data_lstm_pb2.ResponseMessage(reply="Invalid gesture data: First gesture is empty")
+
+            total_points_per_gesture = len(request.data[0].points)
+            if total_points_per_gesture % sequence_length != 0:
+                 logging.error(f"Invalid gesture data: First gesture total points ({total_points_per_gesture}) not divisible by sequence length ({sequence_length}).")
+                 return sign_data_lstm_pb2.ResponseMessage(reply=f"Invalid gesture data: Point count ({total_points_per_gesture}) not divisible by sequence length ({sequence_length})")
+
+            feature_size = total_points_per_gesture // sequence_length
+
+            for i, gesture in enumerate(request.data):
+                if len(gesture.points) != total_points_per_gesture:
+                    logging.error(f"Invalid gesture data: Gesture {i} has inconsistent number of points ({len(gesture.points)}), expected {total_points_per_gesture}.")
+                    return sign_data_lstm_pb2.ResponseMessage(reply=f"Invalid gesture data: Inconsistent points in gesture {i}")
+                all_points_flat.extend(gesture.points)
+
+            try:
+                 sequences = np.array(all_points_flat).reshape((num_gestures, sequence_length, feature_size))
+
+            except ValueError as e:
+                 logging.error(f"Error reshaping data: {e}. Expected total elements {num_gestures * sequence_length * feature_size}, got {len(all_points_flat)}.")
+                 return sign_data_lstm_pb2.ResponseMessage(reply=f"Error processing data shape: {e}")
+
             predictions = model.predict(sequences)
             predicted_actions = [label_map[int(np.argmax(pred))] for pred in predictions]
             response_text = " ".join(predicted_actions)
@@ -44,7 +69,7 @@ class StreamDataService(sign_data_lstm_pb2_grpc.StreamDataServiceServicer):
             return sign_data_lstm_pb2.ResponseMessage(reply=response_text)
 
         except Exception as e:
-            logging.error(f"Error in biDirectionalStream: {e}")
+            logging.error(f"Error in biDirectionalStream: {e}", exc_info=True)
             return sign_data_lstm_pb2.ResponseMessage(reply="Error processing gesture")
 
 def serve():
