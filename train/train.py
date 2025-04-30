@@ -1,9 +1,9 @@
-# model/train.py
 import os
 import numpy as np
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import TensorBoard
+from sklearn.metrics import f1_score, classification_report
 from model import build_model
 from dataset import load_data
 
@@ -20,18 +20,29 @@ x, y = load_data(actions, no_sequences, sequence_length, DATA_PATH)
 y = to_categorical(y).astype(int)
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.05, random_state=42)
 
-input_shape = (sequence_length, x.shape[-1])  # e.g. (30, 1662)
+input_shape = (sequence_length, x.shape[-1])
 num_classes = len(actions)
 model = build_model(input_shape, num_classes)
+model.build((None,) + input_shape)
 model.summary()
 
 tb_callback = TensorBoard(log_dir=LOG_DIR)
 
 print("Training model...")
-model.fit(x_train, y_train, epochs=100, callbacks=[tb_callback])
+model.fit(x_train, y_train, epochs=100, validation_data=(x_test, y_test), callbacks=[tb_callback])
 
-loss, acc = model.evaluate(x_test, y_test)
-print(f"Test Accuracy: {acc * 100:.2f}%")
+print("Evaluating model...")
+loss, acc, precision, recall = model.evaluate(x_test, y_test)
+print(f"Accuracy:  {acc * 100:.2f}%")
+print(f"Precision: {precision * 100:.2f}%")
+print(f"Recall:    {recall * 100:.2f}%")
+y_pred = model.predict(x_test)
+y_pred_labels = np.argmax(y_pred, axis=1)
+y_true_labels = np.argmax(y_test, axis=1)
+
+f1 = f1_score(y_true_labels, y_pred_labels, average='weighted')
+print(f"F1 Score:  {f1 * 100:.2f}%")
+print("\nClassification Report:")
+print(classification_report(y_true_labels, y_pred_labels, target_names=actions))
 model.save(MODEL_SAVE_PATH)
 print(f"Model saved to {MODEL_SAVE_PATH}")
-
