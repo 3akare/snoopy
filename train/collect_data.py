@@ -9,8 +9,32 @@ mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
 
 # Constants
-DATA_PATH = os.path.join("data", "MP_Data")
-ACTIONS = ["hello", "thanks", "i love you"]
+DATA_PATH = os.path.join("data")
+ACTIONS = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    "Name",
+    "Learn",
+    "Restroom",
+    "No",
+    "What",
+    "Sign",
+    "Where",
+    "Sister",
+    "Nice",
+    "Not",
+    "Classroom",
+    "Girl-friend",
+    "You",
+    "Student",
+    "Buy",
+    "Brother",
+    "Meet",
+    "Teacher",
+    "Food",
+    "Have"
+]
 NUM_SEQUENCES = 30  # Number of videos per action
 SEQUENCE_LENGTH = 30  # Frames per video
 

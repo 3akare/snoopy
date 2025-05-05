@@ -8,20 +8,44 @@ from model import build_model
 from dataset import load_data
 
 # Training parameters
-actions = ["hello", "thanks", "i love you"]
+ACTIONS = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    "Name",
+    "Learn",
+    "Restroom",
+    "No",
+    "What",
+    "Sign",
+    "Where",
+    "Sister",
+    "Nice",
+    "Not",
+    "Classroom",
+    "Girl-friend",
+    "You",
+    "Student",
+    "Buy",
+    "Brother",
+    "Meet",
+    "Teacher",
+    "Food",
+    "Have"
+]
 no_sequences = 30
 sequence_length = 30
-DATA_PATH = os.path.join("data", "MP_Data")
+DATA_PATH = os.path.join("data")
 LOG_DIR = os.path.join("logs")
 MODEL_SAVE_PATH = os.path.join("models", "model.h5")
 
 print("Loading data...")
-x, y = load_data(actions, no_sequences, sequence_length, DATA_PATH)
+x, y = load_data(ACTIONS, no_sequences, sequence_length, DATA_PATH)
 y = to_categorical(y).astype(int)
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.05, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=42)
 
 input_shape = (sequence_length, x.shape[-1])
-num_classes = len(actions)
+num_classes = len(ACTIONS)
 model = build_model(input_shape, num_classes)
 model.build((None,) + input_shape)
 model.summary()

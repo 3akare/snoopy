@@ -9,7 +9,31 @@ import sign_data_lstm_pb2
 import sign_data_lstm_pb2_grpc
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
-ACTIONS = ["hello", "thanks", "i love you"]
+ACTIONS = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    "Name",
+    "Learn",
+    "Restroom",
+    "No",
+    "What",
+    "Sign",
+    "Where",
+    "Sister",
+    "Nice",
+    "Not",
+    "Classroom",
+    "Girl-friend",
+    "You",
+    "Student",
+    "Buy",
+    "Brother",
+    "Meet",
+    "Teacher",
+    "Food",
+    "Have"
+]
 label_map = {i: action for i, action in enumerate(ACTIONS)}
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'model.h5')
