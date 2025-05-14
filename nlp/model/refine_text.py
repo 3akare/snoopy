@@ -27,7 +27,7 @@ def refine_text(text):
     2.  **Remove Repetitions:** Eliminate any redundant or repeated words/phrases.
     3.  **Reconstruct Logical Meaning:** If the input is disordered, infer the most probable logical meaning and sequence based on the available vocabulary items.
     4.  **Preserve Intent Strictly:** DO NOT add information not implied by the input words. Only reorder or rephrase to improve clarity based *only* on the provided concepts.
-    5.  **Human Tone**: Do you better to make the output sound human and real.
+    5.  **Human Tone**: Do your best to make the output sound human and real.
     # Vocabulary Reference:
     A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, Name, Learn, Restroom, No, What, Sign, Where, Sister, Nice, Not, Classroom, Girl-friend, You, Student, Buy, Brother, Meet, Teacher, Food, Have
     # Examples:
