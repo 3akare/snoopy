@@ -4,41 +4,14 @@ import numpy as np
 import mediapipe as mp
 import time
 
-# Initialize MediaPipe Holistic
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
 
-# Constants
 DATA_PATH = os.path.join("data")
-ACTIONS = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-    "Name",
-    "Learn",
-    "Restroom",
-    "No",
-    "What",
-    "Sign",
-    "Where",
-    "Sister",
-    "Nice",
-    "Not",
-    "Classroom",
-    "Girl-friend",
-    "You",
-    "Student",
-    "Buy",
-    "Brother",
-    "Meet",
-    "Teacher",
-    "Food",
-    "Have"
-]
-NUM_SEQUENCES = 30  # Number of videos per action
-SEQUENCE_LENGTH = 30  # Frames per video
+ACTIONS = ["D", "A", "V", "I", "D", "ME", "NAME"]
+NUM_SEQUENCES = 60
+SEQUENCE_LENGTH = 80
 
-# Create directories
 for action in ACTIONS:
     for sequence in range(NUM_SEQUENCES):
         os.makedirs(os.path.join(DATA_PATH, action, str(sequence)), exist_ok=True)
@@ -53,22 +26,23 @@ def mediapipe_detection(image, model):
 
 def draw_landmarks(image, results):
     """Draws facial, pose, and hand landmarks."""
-    mp_drawing.draw_landmarks(image, results.face_landmarks, mp_holistic.FACEMESH_TESSELATION)
-    mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+    # mp_drawing.draw_landmarks(image, results.face_landmarks, mp_holistic.FACEMESH_TESSELATION)
+    # mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
     mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
     mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
 def extract_keypoints(results):
     """Extracts keypoints from detected landmarks."""
-    pose = np.array([[res.x, res.y, res.z, res.visibility] for res in results.pose_landmarks.landmark]
-                    ).flatten() if results.pose_landmarks else np.zeros(33 * 4)
-    face = np.array([[res.x, res.y, res.z] for res in results.face_landmarks.landmark]
-                    ).flatten() if results.face_landmarks else np.zeros(468 * 3)
+    # pose = np.array([[res.x, res.y, res.z, res.visibility] for res in results.pose_landmarks.landmark]
+    #                 ).flatten() if results.pose_landmarks else np.zeros(33 * 4)
+    # face = np.array([[res.x, res.y, res.z] for res in results.face_landmarks.landmark]
+    #                 ).flatten() if results.face_landmarks else np.zeros(468 * 3)
     rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]
                   ).flatten() if results.right_hand_landmarks else np.zeros(21 * 3)
     lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]
                   ).flatten() if results.left_hand_landmarks else np.zeros(21 * 3)
-    return np.concatenate([pose, face, lh, rh])
+    # return np.concatenate([pose, face, lh, rh])
+    return np.concatenate([lh, rh]) # focus on only hand gestures... for now
 
 # Open Webcam
 cap = cv2.VideoCapture(0)
@@ -76,22 +50,27 @@ cap = cv2.VideoCapture(0)
 with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
     for action in ACTIONS:
         print(f"\nGet ready to record '{action.upper()}'. Press 'q' anytime to quit.")
-        time.sleep(2)  # Give user time to prepare
-
+        time.sleep(0.5)
         for sequence in range(NUM_SEQUENCES):
             print(f"\nRecording Sequence {sequence + 1}/{NUM_SEQUENCES} for '{action}'")
-            time.sleep(2)  # Short break between sequences
+            # countdown
+            for i in range(3, 0, -1):
+                ret, frame = cap.read()
+                if not ret: break # Handle webcam error during countdown
+                image = frame.copy()
+                cv2.putText(image, f'Starting in {i}', (120,200),
+                           cv2.FONT_HERSHEY_SIMPLEX, 2, (0,255,0), 4, cv2.LINE_AA)
+                cv2.imshow("Data Collection", image)
+                cv2.waitKey(500) # Wait 0.5 seconds
+            sequence_keypoints = [] # List to store keypoints for this single sequence
 
             for frame_num in range(SEQUENCE_LENGTH):
                 ret, frame = cap.read()
                 if not ret:
                     print("Error: Could not capture frame.")
-                    continue
-
-                # Process frame
+                    break
                 image, results = mediapipe_detection(frame, holistic)
                 draw_landmarks(image, results)
-
                 # Display instructions
                 cv2.putText(image, f"Recording '{action.upper()}'", (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
@@ -110,11 +89,17 @@ with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=
                     cv2.destroyAllWindows()
                     exit()
 
-                # Extract and save keypoints
+                # Extract keypoints and ADD TO BUFFER
                 keypoints = extract_keypoints(results)
-                npy_path = os.path.join(DATA_PATH, action, str(sequence), f"{frame_num}.npy")
-                np.save(npy_path, keypoints)
+                sequence_keypoints.append(keypoints) # <-- Add keypoints to the list
 
+            if sequence_keypoints:
+                sequence_keypoints_array = np.array(sequence_keypoints)
+                npy_path = os.path.join(DATA_PATH, action, str(sequence), "sequence_data.npy")
+                np.save(npy_path, sequence_keypoints_array)
+                print(f"Saved sequence {sequence + 1} ({len(sequence_keypoints)} frames) for '{action}' to {npy_path}")
+            else:
+                 print(f"Warning: No frames collected for sequence {sequence + 1} for '{action}'. Not saving.")
 cap.release()
 cv2.destroyAllWindows()
-
+print("\nData Collection Complete!")
