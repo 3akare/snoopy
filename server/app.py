@@ -26,7 +26,7 @@ logging.basicConfig(
 )
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
-SEQUENCE_LENGTH = 30
+SEQUENCE_LENGTH = 80
 HOLISTIC_MODEL_COMPLEXITY = 1
 
 @app.route("/upload", methods=["POST"])

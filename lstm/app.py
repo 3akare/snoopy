@@ -9,34 +9,10 @@ import sign_data_lstm_pb2
 import sign_data_lstm_pb2_grpc
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
-ACTIONS = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-    "Name",
-    "Learn",
-    "Restroom",
-    "No",
-    "What",
-    "Sign",
-    "Where",
-    "Sister",
-    "Nice",
-    "Not",
-    "Classroom",
-    "Girl-friend",
-    "You",
-    "Student",
-    "Buy",
-    "Brother",
-    "Meet",
-    "Teacher",
-    "Food",
-    "Have"
-]
+ACTIONS = ["D", "A", "V", "I", "D", "ME", "NAME"]
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'model.h5')
 label_map = {i: action for i, action in enumerate(ACTIONS)}
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'model.h5')
 try:
     model = tf.keras.models.load_model(MODEL_PATH)
 except Exception as e:
@@ -57,7 +33,7 @@ class StreamDataService(sign_data_lstm_pb2_grpc.StreamDataServiceServicer):
                 return sign_data_lstm_pb2.ResponseMessage(reply="No gesture data received")
 
             num_gestures = len(request.data)
-            sequence_length = 30
+            expected_sequence_length = 80
             all_points_flat = []
             feature_size = None
             total_points_per_gesture = None
@@ -67,11 +43,11 @@ class StreamDataService(sign_data_lstm_pb2_grpc.StreamDataServiceServicer):
                 return sign_data_lstm_pb2.ResponseMessage(reply="Invalid gesture data: First gesture is empty")
 
             total_points_per_gesture = len(request.data[0].points)
-            if total_points_per_gesture % sequence_length != 0:
-                 logging.error(f"Invalid gesture data: First gesture total points ({total_points_per_gesture}) not divisible by sequence length ({sequence_length}).")
-                 return sign_data_lstm_pb2.ResponseMessage(reply=f"Invalid gesture data: Point count ({total_points_per_gesture}) not divisible by sequence length ({sequence_length})")
+            if total_points_per_gesture % expected_sequence_length != 0:
+                 logging.error(f"Invalid gesture data: First gesture total points ({total_points_per_gesture}) not divisible by sequence length ({expected_sequence_length}).")
+                 return sign_data_lstm_pb2.ResponseMessage(reply=f"Invalid gesture data: Point count ({total_points_per_gesture}) not divisible by sequence length ({expected_sequence_length})")
 
-            feature_size = total_points_per_gesture // sequence_length
+            feature_size = total_points_per_gesture // expected_sequence_length
 
             for i, gesture in enumerate(request.data):
                 if len(gesture.points) != total_points_per_gesture:
@@ -80,10 +56,10 @@ class StreamDataService(sign_data_lstm_pb2_grpc.StreamDataServiceServicer):
                 all_points_flat.extend(gesture.points)
 
             try:
-                 sequences = np.array(all_points_flat).reshape((num_gestures, sequence_length, feature_size))
+                 sequences = np.array(all_points_flat).reshape((num_gestures, expected_sequence_length, feature_size))
 
             except ValueError as e:
-                 logging.error(f"Error reshaping data: {e}. Expected total elements {num_gestures * sequence_length * feature_size}, got {len(all_points_flat)}.")
+                 logging.error(f"Error reshaping data: {e}. Expected total elements {num_gestures * expected_sequence_length * feature_size}, got {len(all_points_flat)}.")
                  return sign_data_lstm_pb2.ResponseMessage(reply=f"Error processing data shape: {e}")
 
             predictions = model.predict(sequences)
