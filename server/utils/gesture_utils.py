@@ -118,7 +118,6 @@ def process_video_parallel(sequence_length, model_complexity=1, min_detection_co
                 logging.warning(f"Failed to encode frame {frame_idx} from {video_path}. Skipping.")
                 continue
             
-            # --- THE CRITICAL FIX IS HERE ---
             # Send a tuple of (frame_bytes, frame_index)
             frames_to_process_for_queue.append((encoded_frame.tobytes(), frame_idx))
             frame_idx += 1
@@ -132,7 +131,6 @@ def process_video_parallel(sequence_length, model_complexity=1, min_detection_co
             if not ret_encode:
                 logging.warning(f"Failed to encode pre-loaded frame {i}. Skipping.")
                 continue
-            # --- THE CRITICAL FIX IS HERE ---
             # Send a tuple of (frame_bytes, frame_index)
             frames_to_process_for_queue.append((encoded_frame.tobytes(), i))
 
