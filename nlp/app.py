@@ -36,7 +36,7 @@ def serve():
     
     sign_data_nlp_pb2_grpc.add_StreamDataServiceServicer_to_server(StreamDataService(), server)
     server.add_insecure_port("[::]:50052")
-    logging.info("Server started on port 50052")
+    logging.info("NLP gRPC Server started on port 50052")
     server.start()
     server.wait_for_termination()
 
