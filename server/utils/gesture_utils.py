@@ -29,7 +29,6 @@ def _init_worker(model_complexity, min_detection_confidence, min_tracking_confid
         logging.info(f"Worker process {os.getpid()} initialized MediaPipe Holistic model (Complexity: {model_complexity}).")
     except Exception as e:
         logging.critical(f"Worker process {os.getpid()} failed to initialize MediaPipe Holistic model: {e}", exc_info=True)
-        # Re-raise to ensure the worker process fails gracefully
         raise
 
 def mediapipe_detection(image, model):
@@ -42,37 +41,49 @@ def mediapipe_detection(image, model):
 
 def extract_keypoints(results):
     """Extracts keypoints from detected landmarks focusing on hands."""
-    # Ensure consistency with your model's expected input (e.g., 126 features for only hands)
     lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() \
-        if results.left_hand_landmarks else np.zeros(21 * 3, dtype=np.float32) # Ensure 0s are float32
+        if results.left_hand_landmarks else np.zeros(21 * 3, dtype=np.float32)
     rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() \
-        if results.right_hand_landmarks else np.zeros(21 * 3, dtype=np.float32) # Ensure 0s are float32
+        if results.right_hand_landmarks else np.zeros(21 * 3, dtype=np.float32)
     
-    # Concatenate in the order expected by your trained model
     return np.concatenate([lh, rh]).astype(np.float32)
 
-def _process_frame_task(frame_array_bytes):
+def _process_frame_task(frame_bytes_data):
     """
     Task for worker processes to decode a frame and extract keypoints.
     Receives frame as bytes to avoid shared memory issues and optimize serialization.
     """
     global _worker_holistic_model
     if _worker_holistic_model is None:
-        # This fallback might happen if initialization failed or for some other reason.
-        # Ideally, _init_worker should prevent workers from starting without a model.
         logging.error(f"Worker {os.getpid()}: Holistic model not initialized. This indicates a setup issue.")
         return None
 
     try:
-        # Decode the numpy array from bytes
-        frame_array = np.frombuffer(frame_array_bytes, dtype=np.uint8).reshape(
-            cv2.imdecode(np.frombuffer(frame_array_bytes, dtype=np.uint8), cv2.IMREAD_COLOR).shape
-        )
-        
-        # Mediapipe processing
+        # Correct unpacking: frame_bytes_data is expected to be a tuple (frame_array_bytes, frame_idx)
+        frame_array_bytes, frame_idx = frame_bytes_data
+
+        # Decode the image bytes into a NumPy array.
+        frame_array = cv2.imdecode(np.frombuffer(frame_array_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+
+        if frame_array is None:
+            logging.error(f"Worker process {os.getpid()} failed to decode frame {frame_idx}. Skipping.")
+            return None
+
+        # Define your target resolution.
+        TARGET_WIDTH = 640
+        TARGET_HEIGHT = 480
+
+        # Check if resizing is needed and perform it.
+        current_height, current_width, _ = frame_array.shape
+        if current_width != TARGET_WIDTH or current_height != TARGET_HEIGHT:
+            frame_array = cv2.resize(frame_array, (TARGET_WIDTH, TARGET_HEIGHT), interpolation=cv2.INTER_AREA)
+
+        # Mediapipe processing.
         results = mediapipe_detection(frame_array, _worker_holistic_model)
         keypoints = extract_keypoints(results)
+
         return keypoints
+
     except Exception as e:
         logging.error(f"Worker process {os.getpid()} failed to process frame: {e}", exc_info=True)
         return None
@@ -87,7 +98,8 @@ def process_video_parallel(sequence_length, model_complexity=1, min_detection_co
     if video_path is None and frame_arrays is None:
         raise ValueError("Either video_path or frame_arrays must be provided.")
 
-    frames_to_process = []
+    frames_to_process_for_queue = [] # This will store tuples of (frame_bytes, frame_idx)
+    
     if video_path:
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -95,53 +107,50 @@ def process_video_parallel(sequence_length, model_complexity=1, min_detection_co
             return []
         
         logging.info(f"Reading frames from {video_path}...")
+        frame_idx = 0
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
-            # Convert frame to bytes for efficient IPC (ProcessPoolExecutor uses pickle, which can be slow for large numpy arrays)
-            # This creates a significant overhead during serialization/deserialization.
-            # A more advanced solution would be shared memory or multiprocessing.Queue with raw bytes.
-            # However, for simplicity and staying within current structure, we'll try this.
             
-            # Using cv2.imencode for more robust serialization of image data
-            ret_encode, encoded_frame = cv2.imencode('.png', frame) # Use PNG for lossless compression
+            ret_encode, encoded_frame = cv2.imencode('.png', frame)
             if not ret_encode:
-                logging.warning(f"Failed to encode frame from {video_path}.")
+                logging.warning(f"Failed to encode frame {frame_idx} from {video_path}. Skipping.")
                 continue
-            frames_to_process.append(encoded_frame.tobytes())
+            
+            # --- THE CRITICAL FIX IS HERE ---
+            # Send a tuple of (frame_bytes, frame_index)
+            frames_to_process_for_queue.append((encoded_frame.tobytes(), frame_idx))
+            frame_idx += 1
         cap.release()
-        logging.info(f"Finished reading {len(frames_to_process)} frames from video.")
+        logging.info(f"Finished reading and encoding {len(frames_to_process_for_queue)} frames from video.")
     elif frame_arrays is not None:
         logging.info(f"Using {len(frame_arrays)} pre-loaded frames.")
         # Assuming frame_arrays are already numpy arrays, encode them
-        for frame in frame_arrays:
+        for i, frame in enumerate(frame_arrays):
             ret_encode, encoded_frame = cv2.imencode('.png', frame)
             if not ret_encode:
-                logging.warning("Failed to encode pre-loaded frame.")
+                logging.warning(f"Failed to encode pre-loaded frame {i}. Skipping.")
                 continue
-            frames_to_process.append(encoded_frame.tobytes())
+            # --- THE CRITICAL FIX IS HERE ---
+            # Send a tuple of (frame_bytes, frame_index)
+            frames_to_process_for_queue.append((encoded_frame.tobytes(), i))
 
-    if not frames_to_process:
+    if not frames_to_process_for_queue:
         logging.warning("No frames available for processing.")
         return []
 
-    logging.info(f"Starting parallel processing of {len(frames_to_process)} frames...")
+    logging.info(f"Starting parallel processing of {len(frames_to_process_for_queue)} frames...")
     all_keypoints = []
 
-    # Use ProcessPoolExecutor for CPU-bound MediaPipe processing
-    # Max workers set to CPU count for optimal CPU utilization
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=os.cpu_count(),
         initializer=_init_worker,
         initargs=(model_complexity, min_detection_confidence, min_tracking_confidence)
     ) as executor:
         try:
-            # `chunksize` can optimize performance by sending frames in batches
-            # to workers, reducing IPC overhead. Experiment with this value.
-            # A common starting point is len(frames) // num_workers * 2 or similar.
-            chunksize = max(1, len(frames_to_process) // (os.cpu_count() * 2)) 
-            keypoints_iterator = executor.map(_process_frame_task, frames_to_process, chunksize=chunksize)
+            chunksize = max(1, len(frames_to_process_for_queue) // (os.cpu_count() * 2)) 
+            keypoints_iterator = executor.map(_process_frame_task, frames_to_process_for_queue, chunksize=chunksize)
             all_keypoints = list(keypoints_iterator)
             logging.info("Finished parallel processing of frames.")
         except Exception as e:
@@ -153,22 +162,12 @@ def process_video_parallel(sequence_length, model_complexity=1, min_detection_co
         logging.error("No valid keypoints extracted from any frame. Check MediaPipe output or input video quality.")
         return []
 
-    # Segment keypoints into sequences of fixed length
     logging.info(f"Segmenting {len(all_keypoints)} keypoint sets into sequences of length {sequence_length}...")
     sequences = []
-    # Use a direct loop with a sliding window approach for segmentation,
-    # ensuring each extracted sequence is exactly `sequence_length` long.
-    # No buffering needed, just direct segmentation.
-    
-    # If the intent is to produce non-overlapping sequences for training data generation,
-    # then iterate with step = sequence_length.
-    # If it's for inference with a sliding window (like in train.py `process_video_and_save_sequences`),
-    # that logic should be in the LSTM `app.py`.
-    # Based on `train.py`, you extract non-overlapping sequences.
     
     for i in range(0, len(all_keypoints) - sequence_length + 1, sequence_length):
         sequence_segment = all_keypoints[i : i + sequence_length]
-        sequences.append(np.array(sequence_segment)) # Store as numpy array
+        sequences.append(np.array(sequence_segment))
 
     logging.info(f"Finished segmentation. Created {len(sequences)} sequences.")
     return sequences
