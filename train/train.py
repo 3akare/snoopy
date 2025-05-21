@@ -25,8 +25,8 @@ NUM_SEQUENCES = 60 # Number of sequences to load per action
 SEQUENCE_LENGTH = 80 # Consistent sequence length
 DATA_PATH = os.path.join("data")
 LOG_DIR = os.path.join("logs")
-MODEL_DIR = os.path.join("models")
-MODEL_SAVE_PATH = os.path.join(MODEL_DIR, "best_model.h5") # Save best model by validation metric
+MODEL_DIR = os.path.join("model")
+MODEL_SAVE_PATH = os.path.join(MODEL_DIR, "model.h5") # Save best model by validation metric
 
 # Ensure directories exist
 os.makedirs(LOG_DIR, exist_ok=True)
