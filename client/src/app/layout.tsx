@@ -11,7 +11,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "snoopy",
-  description: "Nigerian Sign Language to Speech Translation System"
+  description: "Nigerian Sign Language to Speech Translation System",
+  manifest: "/mainfest.json"
 }
 
 export default function RootLayout({
