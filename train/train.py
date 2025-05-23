@@ -7,6 +7,7 @@ from sklearn.metrics import f1_score, classification_report
 import tensorflow as tf
 import logging
 import sys
+import random
 
 # Import custom modules
 from model import build_model
@@ -19,14 +20,37 @@ logging.basicConfig(
     stream=sys.stdout
 )
 
+SEED = 42
+os.environ['PYTHONHASHSEED'] = str(SEED)
+np.random.seed(SEED)
+tf.random.set_seed(SEED)
+random.seed(SEED) 
+
 # Configuration constants
-ACTIONS = ["D", "A","NAME"]
+ACTIONS = ["D", "T", "V"]
 NUM_SEQUENCES = 60 # Number of sequences to load per action
 SEQUENCE_LENGTH = 80 # Consistent sequence length
 DATA_PATH = os.path.join("data")
 LOG_DIR = os.path.join("logs")
 MODEL_DIR = os.path.join("model")
-MODEL_SAVE_PATH = os.path.join(MODEL_DIR, "model.h5") # Save best model by validation metric
+MODEL_SAVE_PATH = os.path.join(MODEL_DIR, "model.keras") # Save best model by validation metric
+
+# label_to_index = {action: i for i, action in enumerate(ACTIONS)}
+
+# Define weights based on observed poor performance. Higher weight for worse recall.
+# You can start with something like this:
+# class_weights_dict = {
+#     label_to_index["D"]: 2.0,    # Recall was ~0.50
+#     label_to_index["A"]: 15.0,   # Recall was 0.00
+#     label_to_index["V"]: 10.0,   # Recall was ~0.08
+#     label_to_index["I"]: 15.0,   # Recall was 0.00
+#     label_to_index["S"]: 15.0,   # Recall was 0.00
+#     label_to_index["T"]: 15.0,   # Recall was 0.00
+#     label_to_index["E"]: 1.0,    # Recall was ~0.83
+#     label_to_index["ME"]: 1.0,   # Recall was ~0.83
+#     label_to_index["NAME"]: 1.0  # Recall was 1.00
+# }
+# logging.info(f"Using class weights: {class_weights_dict}")
 
 # Ensure directories exist
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -48,7 +72,7 @@ y = to_categorical(y, num_classes=len(ACTIONS)).astype(np.int32) # Ensure int32 
 # Split data
 logging.info("Splitting data into training and testing sets...")
 x_train, x_test, y_train, y_test = train_test_split(
-    x, y, test_size=0.2, stratify=y, random_state=42
+    x, y, test_size=0.2, stratify=y, random_state=SEED # Use the global SEED here too
 )
 logging.info(f"Train samples: {len(x_train)}, Test samples: {len(x_test)}")
 
@@ -56,14 +80,14 @@ logging.info(f"Train samples: {len(x_train)}, Test samples: {len(x_test)}")
 logging.info("Creating TensorFlow Datasets...")
 BUFFER_SIZE = len(x_train) # Use total dataset size for shuffle buffer
 BATCH_SIZE = 32 # Consistent batch size
-train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(BUFFER_SIZE).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).shuffle(BUFFER_SIZE, seed=SEED).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE) # Add seed to shuffle
 test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test)).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 logging.info("TensorFlow Datasets created.")
 
 # Build and compile model
 input_shape = (SEQUENCE_LENGTH, x.shape[-1]) # (sequence_length, feature_size)
 num_classes = len(ACTIONS)
-model = build_model(input_shape, num_classes)
+model = build_model(input_shape, num_classes) # Assuming build_model itself doesn't introduce unseeded randomness
 model.build((None,) + input_shape) # Build the model to show summary and check input shape
 model.summary()
 
@@ -88,7 +112,8 @@ history = model.fit(
     validation_data=test_dataset,
     epochs=200, # Max epochs
     callbacks=callbacks,
-    verbose=2 # Show progress bar for each epoch
+    verbose=2, # Show progress bar for each epoch
+    # class_weight=class_weights_dict
 )
 logging.info("Model training finished.")
 

@@ -79,14 +79,21 @@ def process_video_and_save_sequences(video_path, action_name, data_path=DATA_PAT
 
             results = mediapipe_detection(frame, holistic)
             keypoints = extract_keypoints(results)
-            
-            # Optionally, you can add a check here for 'valid' keypoints if you expect specific detections
-            # e.g., if keypoints is all zeros, it means no hands were detected. You might want to skip such frames.
-            # if np.all(keypoints == 0):
-            #     logging.debug(f"No keypoints detected in frame {frame_count} for {video_path}. Skipping.")
-            #     frame_count += 1
-            #     continue
-                
+            ZERO_THRESHOLD_PER_FRAME = 0.9
+
+            # Calculate the proportion of zero values in the current frame's keypoints
+            percentage_zeros = np.sum(keypoints == 0) / keypoints.size
+
+            # If the frame consists of too many zeros, log a warning and skip it.
+            if percentage_zeros >= ZERO_THRESHOLD_PER_FRAME:
+                logging.warning(
+                    f"Skipping frame {frame_count} in '{video_path}' "
+                    f"for action '{action_name}': {percentage_zeros*100:.2f}% of keypoints are zeros. "
+                    "Hand detection likely failed."
+                )
+                frame_count += 1 # Ensure frame count is incremented for skipped frames
+                continue # Skip adding this frame's keypoints and proceed to the next frame
+
             all_video_keypoints.append(keypoints)
             frame_count += 1
     cap.release()

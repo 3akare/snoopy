@@ -11,8 +11,8 @@ import sign_data_lstm_pb2_grpc
 
 # Configuration constants
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024  # 1GB
-ACTIONS = ["D", "A", "NAME"]
-MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'model.h5')
+ACTIONS = ["D", "T", "V"]
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'model.keras')
 SEQUENCE_LENGTH = 80 # Define it here for consistency
 
 # Setup logging

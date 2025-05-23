@@ -16,7 +16,8 @@ def build_model(input_shape, num_classes):
         tf.keras.Model: Compiled TensorFlow Keras model.
     """
     model = Sequential([
-        Bidirectional(LSTM(128, return_sequences=True, activation='relu', input_shape=input_shape)), # Increased units for potentially more capacity, added activation
+        tf.keras.Input(shape=input_shape),
+        Bidirectional(LSTM(128, return_sequences=True, activation='relu')), # Increased units for potentially more capacity, added activation
         Dropout(0.4), # Increased dropout slightly
         Bidirectional(LSTM(64, activation='relu')), # Increased units, added activation
         Dropout(0.4), # Increased dropout slightly

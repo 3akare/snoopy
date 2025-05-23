@@ -15,30 +15,32 @@ logging.basicConfig(
 # Configuration
 RAW_VIDEOS_DIR = "raw_videos"
 VIDEO_EXTENSIONS = ('.mp4', '.mov', '.webm', '.avi') # Add all supported extensions
+EXCLUDED_LABELS = {"D", "T", "V", "S", "E", "A"}  # Directories to skip
 
 logging.info(f"Starting batch processing of videos in '{RAW_VIDEOS_DIR}'...")
 
 # Walk through the directory tree
 for root, dirs, files in os.walk(RAW_VIDEOS_DIR):
+    label = os.path.basename(root).upper()
+    
+    # Skip excluded labels
+    if label in EXCLUDED_LABELS:
+        logging.info(f"Skipping directory '{root}' with excluded label '{label}'")
+        continue
+
     for file_name in files:
         # Check if the file has a supported video extension
         if file_name.lower().endswith(VIDEO_EXTENSIONS):
             video_full_path = os.path.join(root, file_name)
 
-            # Extract the label (gesture name) from the parent directory name
-            # e.g., for raw_videos/A/A_01.mp4, root will be "raw_videos/A", so os.path.basename(root) is "A"
-            label = os.path.basename(root).upper()
-
-            if not label: # Handle case where video is directly in raw_videos if that's ever possible
+            if not label:
                 logging.warning(f"Could not determine label for {video_full_path}. Skipping.")
                 continue
 
             logging.info(f"Processing video: '{video_full_path}' with detected label: '{label}'")
-            
+
             try:
                 # Call the process_video_to_sequences.py script
-                # Ensure process_video_to_sequences.py is in the same directory as this script,
-                # or adjust the path accordingly.
                 command = ["python", "process_video_to_sequences.py", video_full_path, label]
                 result = call(command)
 
