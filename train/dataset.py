@@ -78,10 +78,6 @@ def load_data(actions, no_sequences, sequence_length, data_path):
         
     sequences_np = np.array(sequences, dtype=np.float32) # Ensure float32
     labels_np = np.array(labels, dtype=np.int32) # Labels are integers
-
-    # Shuffle data before returning for better training randomness
-    indices = np.arange(len(sequences_np))
-    np.random.shuffle(indices)
     
     logging.info(f"Successfully loaded {len(sequences_np)} total sequences.")
-    return sequences_np[indices], labels_np[indices]
+    return sequences_np, labels_np
