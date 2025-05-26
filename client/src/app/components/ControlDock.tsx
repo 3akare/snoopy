@@ -25,19 +25,19 @@ const ControlDock = ({
   };
 
   return (
-    <div className="sticky bottom-0 left-0 right-0 flex justify-center pb-6 pt-2">
-      <div className="bg-black/80 backdrop-blur-md border border-green-900/50 rounded-full px-6 py-3 shadow-lg flex items-center gap-8">
+    <div className="sticky bottom-0 left-0 right-0 flex justify-center pb-4 md:pb-6 pt-2">
+      <div className="bg-white/90 backdrop-blur-md border border-blue-200 rounded-full px-4 md:px-6 py-2 md:py-3 shadow-lg flex items-center gap-4 md:gap-8">
         {/* First Button (Camera/Stop/Trash) */}
         <button
           onClick={handleFirstButtonClick}
           disabled={["loading", "show-text"].includes(state)}
           className={cn(
-            "p-3 rounded-full transition-all transform hover:scale-110",
+            "p-2 md:p-3 rounded-full transition-all transform hover:scale-110",
             state === "recording"
-              ? "bg-green-900/50 text-green-400 shadow-md"
+              ? "bg-blue-100 text-blue-600 shadow-md border border-blue-200"
               : state === "ready"
-                ? "bg-gray-800 text-gray-300 shadow-md"
-                : "bg-gray-900 hover:bg-gray-800 text-green-400",
+                ? "bg-gray-100 text-gray-600 shadow-md border border-gray-200"
+                : "bg-gray-50 hover:bg-gray-100 text-blue-600 border border-gray-200",
             ["loading", "show-text"].includes(state) && "opacity-50 cursor-not-allowed",
           )}
           aria-label={
@@ -52,31 +52,32 @@ const ControlDock = ({
           onClick={onPlayTranslatedText}
           disabled={!isTextAvailable || ["recording", "loading"].includes(state)}
           className={cn(
-            "p-3 rounded-full transition-all transform hover:scale-110",
-            isPlaying ? "bg-green-900/50 text-green-400 shadow-md" : "bg-gray-900 hover:bg-gray-800 text-green-400",
+            "p-2 md:p-3 rounded-full transition-all transform hover:scale-110",
+            isPlaying
+              ? "bg-blue-100 text-blue-600 shadow-md border border-blue-200"
+              : "bg-gray-50 hover:bg-gray-100 text-blue-600 border border-gray-200",
             (!isTextAvailable || ["recording", "loading"].includes(state)) && "opacity-50 cursor-not-allowed",
           )}
           aria-label={isPlaying ? "Restart speech" : "Play translated text"}
         >
-          <Play className="w-6 h-6" />
+          <Play className="w-5 h-5 md:w-6 md:h-6" />
         </button>
-
         {/* Send Button */}
         <button
           onClick={state === "ready" ? onSendRecording : onResetRecorder}
           disabled={["recording", "loading", "default"].includes(state)}
           className={cn(
-            "p-3 rounded-full transition-all transform hover:scale-110",
+            "p-2 md:p-3 rounded-full transition-all transform hover:scale-110",
             state === "ready"
-              ? "bg-green-900/50 text-green-400 shadow-md"
+              ? "bg-blue-100 text-blue-600 shadow-md border border-blue-200"
               : state === "show-text" || state === "error"
-                ? "bg-gray-900 hover:bg-gray-800 text-green-400"
-                : "bg-gray-900 text-gray-600",
+                ? "bg-gray-50 hover:bg-gray-100 text-blue-600 border border-gray-200"
+                : "bg-gray-50 text-gray-400 border border-gray-200",
             ["recording", "loading", "default"].includes(state) && "opacity-50 cursor-not-allowed",
           )}
           aria-label={state === "ready" ? "Send recording" : "Reset"}
         >
-          {state === "ready" ? <Send className="w-6 h-6" /> : <X className="w-6 h-6" />}
+          {state === "ready" ? <Send className="w-5 h-5 md:w-6 md:h-6" /> : <X className="w-5 h-5 md:w-6 md:h-6" />}
         </button>
       </div>
     </div>

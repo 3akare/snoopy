@@ -86,7 +86,7 @@ export default function Home() {
             if (!res.ok) throw new Error("Upload failed");
             const data = await res.json();
             setTranslatedText(data.translatedText);
-            const mockTranslatedText = `Hello, my name is David and this is my implementation of a Nigerian Sign Language to speech system.`;
+            // const mockTranslatedText = `Hello, my name is David and this is my implementation of a Nigerian Sign Language to speech system.`;
             wordsRef.current = data.translatedText.split(/\s+/);
             setState("show-text");
         } catch (err) {
@@ -159,7 +159,7 @@ export default function Home() {
                 toast.success("Copied to clipboard", {
                     description: "Text has been copied to your clipboard",
                     duration: 2000,
-                    className: "bg-green-900 text-white",
+                    className: "!text-blue-600",
                 });
             })
             .catch((err) => {
@@ -167,7 +167,7 @@ export default function Home() {
                 toast.error("Failed to copy", {
                     description: "Could not copy text to clipboard",
                     duration: 2000,
-                    className: "bg-red-500 text-white",
+                    className: "!text-blue-600",
                 });
             });
     }, [translatedText]);
@@ -215,7 +215,7 @@ export default function Home() {
             </div>
             {state === "recording" && (
                 <div className="absolute bottom-20 right-4 z-10 hidden md:block">
-                    <div className="md:w-48 md:h-32 xl:w-72 xl:h-48 overflow-hidden rounded-lg border border-green-900/50 shadow-lg bg-black">
+                    <div className="md:w-48 md:h-32 xl:w-72 xl:h-48 overflow-hidden rounded-lg border border-blue-200 shadow-lg bg-white">
                         <video
                             ref={videoRef}
                             className="w-full h-full object-cover transform -scale-x-100"
