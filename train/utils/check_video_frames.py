@@ -3,20 +3,17 @@ import os
 import logging
 import sys
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.StreamHandler(sys.stdout) # Log to console
+        logging.StreamHandler(sys.stdout)
     ]
 )
 
-# Configuration
 RAW_VIDEOS_DIR = "raw_videos"
 LOG_FILE_PATH = os.path.join("logs", "video_frame_check.log")
 
-# Supported video extensions (add more if needed)
 VIDEO_EXTENSIONS = ('.mp4', '.mov', '.webm', '.avi')
 
 def check_video_frames(video_path):
@@ -33,8 +30,6 @@ def check_video_frames(video_path):
     while True:
         ret, frame = cap.read()
         if not ret:
-            # If `ret` is False, either end of video or an error occurred.
-            # Compare frames_successfully_read with total_frames_reported
             if frames_successfully_read < total_frames_reported:
                 warning_message = f"WARNING: Only {frames_successfully_read} frames successfully read (expected {total_frames_reported})"
             break
@@ -45,26 +40,21 @@ def check_video_frames(video_path):
         video_path,
         total_frames_reported,
         frames_successfully_read,
-        frames_successfully_read >= total_frames_reported, # True if all frames read (or more)
+        frames_successfully_read >= total_frames_reported,
         warning_message
     )
 
 if __name__ == "__main__":
     logging.info(f"Starting video frame count check in '{RAW_VIDEOS_DIR}'...")
 
-    # Open log file for writing results
     with open(LOG_FILE_PATH, "w") as f_log:
         f_log.write("--- Video Frame Check Results ---\n")
-        
-        # Walk through the directory tree
         for root, dirs, files in os.walk(RAW_VIDEOS_DIR):
             for file_name in files:
-                # Check if the file has a supported video extension
                 if file_name.lower().endswith(VIDEO_EXTENSIONS):
                     video_full_path = os.path.join(root, file_name)
                     
                     path, total, read, success, warning = check_video_frames(video_full_path)
-                    
                     log_entry = f"Video: {path}, Reported Frames: {total}, Read Frames: {read}"
                     if warning:
                         log_entry += f", {warning}"
