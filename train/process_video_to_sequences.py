@@ -6,11 +6,12 @@ import logging
 import sys
 
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO,
-    stream=sys.stdout
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
 )
-
 mp_hands = mp.solutions.hands
 
 DATA_PATH = os.path.join("data")
@@ -29,7 +30,6 @@ def extract_keypoints(results):
         if results.left_hand_landmarks else np.zeros(21 * 3, dtype=np.float32)
     rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() \
         if results.right_hand_landmarks else np.zeros(21 * 3, dtype=np.float32)
-    
     return np.concatenate([lh, rh]).astype(np.float32)
 
 
