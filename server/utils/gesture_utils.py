@@ -1,10 +1,10 @@
+import os
+import sys
 import cv2
+import logging
 import numpy as np
 import mediapipe as mp
 import concurrent.futures
-import os
-import logging
-import sys
 
 logging.basicConfig(
     level=logging.INFO,

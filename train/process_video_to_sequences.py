@@ -1,9 +1,9 @@
-import cv2
 import os
+import cv2
+import sys
+import logging
 import numpy as np
 import mediapipe as mp
-import logging
-import sys
 
 logging.basicConfig(
     level=logging.INFO,
