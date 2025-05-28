@@ -1,7 +1,7 @@
-import cv2
-import mediapipe as mp
 import os
+import cv2
 import time
+import mediapipe as mp
 
 def record_clean_video_with_gesture_preview(folder_name, num_videos=10, video_duration_sec=25, fps=20.0):
     """ Collect training data and saves to folder """
@@ -19,6 +19,10 @@ def record_clean_video_with_gesture_preview(folder_name, num_videos=10, video_du
         print("Error: Could not open webcam.")
         return
 
+    TARGET_WIDTH = 640
+    TARGET_HEIGHT = 480
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, TARGET_WIDTH)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, TARGET_HEIGHT)
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -44,9 +48,7 @@ def record_clean_video_with_gesture_preview(folder_name, num_videos=10, video_du
 
             frame_to_save = frame.copy()
             frame_for_display = cv2.flip(frame.copy(), 1)
-
             rgb_frame_for_mp = cv2.cvtColor(frame_for_display, cv2.COLOR_BGR2RGB)
-
             results = hands.process(rgb_frame_for_mp)
 
             if results.multi_hand_landmarks:
@@ -76,6 +78,7 @@ def record_clean_video_with_gesture_preview(folder_name, num_videos=10, video_du
 
 if __name__ == "__main__":
     user_folder_name = input("Enter the name for the video folder: ")
+    user_folder_name = user_folder_name
     number_of_videos = 10
     duration_per_video = 25
     frames_per_second = 20.0

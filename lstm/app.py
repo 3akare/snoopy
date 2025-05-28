@@ -9,7 +9,7 @@ import sign_data_lstm_pb2_grpc
 from concurrent import futures
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
-ACTIONS = []
+ACTIONS = [ "C", "D", "L", "R", "U", "V", "W", "X", "Y", "Z", "NAME"]
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'model', 'model.keras')
 SEQUENCE_LENGTH = 80 
 

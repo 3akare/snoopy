@@ -26,10 +26,16 @@ def mediapipe_detection(image, model):
     return results
 
 def extract_keypoints(results):
-    lh = np.array([[res.x, res.y, res.z] for res in results.left_hand_landmarks.landmark]).flatten() \
-        if results.left_hand_landmarks else np.zeros(21 * 3, dtype=np.float32)
-    rh = np.array([[res.x, res.y, res.z] for res in results.right_hand_landmarks.landmark]).flatten() \
-        if results.right_hand_landmarks else np.zeros(21 * 3, dtype=np.float32)
+    lh = np.zeros(21 * 3, dtype=np.float32)
+    rh = np.zeros(21 * 3, dtype=np.float32)
+    if results.multi_hand_landmarks:
+        for i, hand_landmarks in enumerate(results.multi_hand_landmarks):
+            handedness = results.multi_handedness[i].classification[0].label
+            current_hand_keypoints = np.array([[res.x, res.y, res.z] for res in hand_landmarks.landmark]).flatten()
+            if handedness == 'Left':
+                rh = current_hand_keypoints
+            elif handedness == 'Right':
+                lh = current_hand_keypoints
     return np.concatenate([lh, rh]).astype(np.float32)
 
 

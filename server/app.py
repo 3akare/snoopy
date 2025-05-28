@@ -30,7 +30,6 @@ logging.basicConfig(
 
 MAX_MESSAGE_LENGTH = 1024 * 1024 * 1024
 SEQUENCE_LENGTH = 80
-HOLISTIC_MODEL_COMPLEXITY = 1
 
 @app.route("/upload", methods=["POST"])
 def upload():
@@ -63,7 +62,6 @@ def upload():
         logging.info(f"Starting video processing for {video_path}...")
         sequences = process_video_parallel(
             sequence_length=SEQUENCE_LENGTH,
-            model_complexity=HOLISTIC_MODEL_COMPLEXITY,
             video_path=video_path
         )
         logging.info(f"Video processing finished. Extracted {len(sequences)} sequences.")
@@ -82,9 +80,9 @@ def upload():
                 logging.info(f"Removed temporary video file: {video_path}")
             except OSError as cleanup_e:
                 logging.warning(f"Error removing temporary video file {video_path}: {cleanup_e}")
-
     translated_text = "Processing failed"
     try:
+        # LSTM gRPC call
         logging.info("Sending sequences to LSTM gRPC service...")
         gestures_for_lstm = []
         for seq_arr in sequences:
@@ -92,7 +90,6 @@ def upload():
 
         request_message_lstm = sign_data_lstm_pb2.RequestMessage(data=gestures_for_lstm)
         
-        # LSTM gRPC call
         with grpc.insecure_channel(lstm_host, options=[('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH), ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH)]) as channel:
             stub_lstm = sign_data_lstm_pb2_grpc.StreamDataServiceStub(channel)
             response_lstm = stub_lstm.biDirectionalStream(request_message_lstm)

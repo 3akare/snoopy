@@ -26,7 +26,7 @@ tf.random.set_seed(SEED)
 random.seed(SEED) 
 
 
-ACTIONS = []
+ACTIONS = [ "C", "D", "L", "R", "U", "V", "W", "X", "Y", "Z", "NAME"]
 NUM_SEQUENCES = 60
 SEQUENCE_LENGTH = 80
 DATA_PATH = os.path.join("data")

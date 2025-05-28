@@ -13,7 +13,7 @@ logging.basicConfig(
 
 RAW_VIDEOS_DIR = "raw_videos"
 VIDEO_EXTENSIONS = ('.mp4', '.mov', '.webm', '.avi')
-EXCLUDED_LABELS = {}  # Directories to skip
+EXCLUDED_LABELS = {"C", "D", "L", "R", "U", "V", "W", "X", "Y", "Z", "NAME"}  # Directories to skip
 
 logging.info(f"Starting batch processing of videos in '{RAW_VIDEOS_DIR}'...")
 
