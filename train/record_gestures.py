@@ -1,9 +1,9 @@
-import cv2
 import os
+import cv2
 import time
+import logging
 import argparse
 import mediapipe as mp
-import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
