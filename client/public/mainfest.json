@@ -1,0 +1,20 @@
+{
+  "name": "snoopy",
+  "short_name": "snoopy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#4ADE80",
+  "icons": [
+    {
+      "src": "/snoopy-icon-2.jpg",
+      "sizes": "192x192",
+      "type": "image/jpg"
+    },
+    {
+      "src": "/snoopy-icon-1.jpg",
+      "sizes": "512x512",
+      "type": "image/jpg"
+    }
+  ]
+}
