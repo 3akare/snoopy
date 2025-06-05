@@ -10,6 +10,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/drawing_utils": "^0.3.1675466124",
+    "@mediapipe/hands": "^0.4.1675469240",
     "clsx": "^2.1.1",
     "lucide-react": "^0.487.0",
     "next": "15.0.3",
