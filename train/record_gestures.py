@@ -8,6 +8,10 @@ import logging
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Thresholds
+MIN_HAND_DETECTION_CONFIDENCE = 0.7
+MIN_TRACKING_CONFIDENCE = 0.7
+
 # Define the default video resolution
 RESOLUTION_WIDTH = 640
 RESOLUTION_HEIGHT = 480
@@ -18,7 +22,7 @@ DEFAULT_NUM_RECORDINGS = 10 # Default number of recordings per gesture
 mp_hands = mp.solutions.hands
 mp_drawing = mp.solutions.drawing_utils
 
-def record_gesture(label: str, num_recordings: int = DEFAULT_NUM_RECORDINGS,
+def record_gestures(label: str, num_recordings: int = DEFAULT_NUM_RECORDINGS,
                    duration: int = DEFAULT_DURATION, output_dir: str = 'raw_videos'):
     """
     Records multiple videos of a sign gesture from the webcam, displaying MediaPipe detections live
@@ -54,7 +58,11 @@ def record_gesture(label: str, num_recordings: int = DEFAULT_NUM_RECORDINGS,
     logging.info(f"Webcam initialized: Resolution {RESOLUTION_WIDTH}x{RESOLUTION_HEIGHT}, FPS {fps}")
 
     # Initialize MediaPipe Hands model for processing frames outside the loop to avoid re-initialization
-    with mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7, max_num_hands=2) as hands_model:
+    with mp_hands.Hands(
+        min_detection_confidence=MIN_HAND_DETECTION_CONFIDENCE,
+        min_tracking_confidence=MIN_TRACKING_CONFIDENCE,
+        max_num_hands=2
+    ) as hands_model:
         for i in range(1, num_recordings + 1):
             output_filepath = os.path.join(label_dir, f"{label}_{i:02d}.mp4")
             out = cv2.VideoWriter(output_filepath, fourcc, fps, (RESOLUTION_WIDTH, RESOLUTION_HEIGHT))
