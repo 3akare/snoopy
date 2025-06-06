@@ -3,23 +3,26 @@ syntax = "proto3";
 package services;
 
 // Represents a single frame of keypoints (e.g., 126 float values).
-// This corresponds to one of the inner arrays in your keypoints data.
 message KeypointFrame {
   repeated float keypoints = 1;
+}
+
+// NEW MESSAGE: Represents a complete sequence of frames for a single gesture.
+message GestureSequence {
+  repeated KeypointFrame frames = 1; // Renamed from 'sequence' to 'frames' for clarity
 }
 
 // =================== LSTM Service ===================
 // Defines the prediction service that runs the LSTM model.
 service LstmService {
-  // A simple RPC call that takes a sequence and returns a prediction.
+  // A simple RPC call that takes multiple gesture sequences and returns predictions.
   rpc Predict(LstmRequest) returns (LstmResponse);
 }
 
 // The request message for the LstmService.
 message LstmRequest {
-  // Contains a sequence of keypoint frames.
-  // This directly maps to the list of lists structure, e.g., 80 frames of 126 keypoints.
-  repeated KeypointFrame sequence = 1;
+  // Contains multiple independent gesture sequences.
+  repeated GestureSequence gestures = 1; // Now 'gestures' is a repeated field of GestureSequence
 }
 
 // The response message from the LstmService.

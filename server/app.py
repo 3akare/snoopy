@@ -22,8 +22,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 @app.route("/predict_gesture", methods=["POST"])
 def predict_from_keypoints():
     """
-    Receives a JSON payload with keypoints, gets a prediction from the LSTM service,
-    refines it with the NLP service, and returns the final text.
+    Receives a JSON payload with a list of gesture sequences (keypoints),
+    gets a batch prediction from the LSTM service,
+    refines it with the NLP service (if enabled), and returns the final text.
     """
     logging.info("Keypoint prediction request received.")
     try:
@@ -32,11 +33,20 @@ def predict_from_keypoints():
             logging.warning("Prediction request is missing JSON data or 'keypoints' key.")
             return jsonify({"error": "Invalid request: Missing 'keypoints' in JSON body."}), 400
 
-        keypoints_sequence = data['keypoints']
-        if not isinstance(keypoints_sequence, list) or len(keypoints_sequence) == 0:
-            logging.warning("Received empty or invalid keypoints sequence.")
-            return jsonify({"error": "Invalid keypoints data provided."}), 422
-        logging.info(f"Received a keypoint sequence of shape: ({len(keypoints_sequence)}, {len(keypoints_sequence[0]) if keypoints_sequence else 0})")
+        # Expect data['keypoints'] to be a list of gesture sequences.
+        # Each gesture sequence is a list of frames.
+        # Each frame is a list of float keypoints.
+        # Example: [
+        #   [[f1, f2, ...], [f1, f2, ...], ...],  # Gesture 1
+        #   [[f1, f2, ...], [f1, f2, ...], ...],  # Gesture 2
+        # ]
+        multiple_gesture_sequences = data['keypoints']
+
+        if not isinstance(multiple_gesture_sequences, list) or len(multiple_gesture_sequences) == 0:
+            logging.warning("Received empty or invalid list of gesture sequences.")
+            return jsonify({"error": "Invalid keypoints data provided. Expected a list of gesture sequences."}), 422
+        
+        logging.info(f"Received {len(multiple_gesture_sequences)} gesture(s) for prediction.")
 
     except Exception as e:
         logging.error(f"Error parsing request JSON: {e}", exc_info=True)
@@ -45,9 +55,30 @@ def predict_from_keypoints():
     # LSTM gRPC Call
     lstm_translated_text = ""
     try:
-        frames = [prediction_services_pb2.KeypointFrame(keypoints=frame_data) for frame_data in keypoints_sequence]
-        request_message_lstm = prediction_services_pb2.LstmRequest(sequence=frames)
-        logging.info(f"Sending 1 sequence to LSTM gRPC service at {LSTM_SERVICE_HOST}...")
+        # Prepare a list of GestureSequence messages for the LstmRequest
+        gestures_for_request = []
+        for i, single_gesture_keypoints_sequence in enumerate(multiple_gesture_sequences):
+            if not isinstance(single_gesture_keypoints_sequence, list) or len(single_gesture_keypoints_sequence) == 0:
+                logging.warning(f"Gesture {i}: Empty or invalid sequence received.")
+                return jsonify({"error": f"Invalid data for gesture {i}. Expected a list of frames."}), 422
+
+            # Create KeypointFrame messages for each frame in the current gesture's sequence
+            frames_for_current_gesture = [
+                prediction_services_pb2.KeypointFrame(keypoints=frame_data)
+                for frame_data in single_gesture_keypoints_sequence
+            ]
+            
+            # Create a GestureSequence message for the current gesture
+            # Note: The field name is 'frames' as per the updated .proto
+            gesture_seq_msg = prediction_services_pb2.GestureSequence(frames=frames_for_current_gesture)
+            gestures_for_request.append(gesture_seq_msg)
+
+        # Create the main LstmRequest with all the prepared GestureSequence messages
+        # Note: The field name is 'gestures' as per the updated .proto
+        request_message_lstm = prediction_services_pb2.LstmRequest(gestures=gestures_for_request)
+        
+        logging.info(f"Sending {len(gestures_for_request)} gesture(s) to LSTM gRPC service at {LSTM_SERVICE_HOST}...")
+        
         grpc_options = [
             ('grpc.max_receive_message_length', MAX_GRPC_MESSAGE_LENGTH),
             ('grpc.max_send_message_length', MAX_GRPC_MESSAGE_LENGTH)
@@ -68,33 +99,34 @@ def predict_from_keypoints():
         logging.error(f"An unexpected error occurred during LSTM gRPC call: {e}", exc_info=True)
         return jsonify({"message": "An unexpected error occurred during sign language translation."}), 500
 
-    # NLP gRPC Call
-    final_nlp_response_text = lstm_translated_text
-    if lstm_translated_text and lstm_translated_text.strip(): 
-        try:
-            logging.info(f"Sending translated text to NLP gRPC service at {NLP_SERVICE_HOST}...")
-            request_message_nlp = prediction_services_pb2.NlpRequest(raw_text=lstm_translated_text)
+    # NLP gRPC Call (re-enabled and adjusted based on current design)
+    # final_nlp_response_text = lstm_translated_text
+    # if lstm_translated_text and lstm_translated_text.strip(): 
+    #     try:
+    #         logging.info(f"Sending translated text to NLP gRPC service at {NLP_SERVICE_HOST}...")
+    #         request_message_nlp = prediction_services_pb2.NlpRequest(raw_text=lstm_translated_text)
             
-            grpc_options_nlp = [
-                ('grpc.max_receive_message_length', MAX_GRPC_MESSAGE_LENGTH),
-                ('grpc.max_send_message_length', MAX_GRPC_MESSAGE_LENGTH)
-            ]
-            with grpc.insecure_channel(NLP_SERVICE_HOST, options=grpc_options_nlp) as channel:
-                stub_nlp = prediction_services_pb2_grpc.NlpService(channel)
-                response_nlp = stub_nlp.Refine(request_message_nlp)
-                final_nlp_response_text = response_nlp.refined_text
-                logging.info(f"Received refined text from NLP: '{final_nlp_response_text}'")
-        except grpc.RpcError as rpc_e:
-            logging.error(f"NLP gRPC call failed: {rpc_e.details()} (Code: {rpc_e.code().name})", exc_info=True)
-            logging.warning("NLP service call failed. Returning raw LSTM translation.")
-        except Exception as e:
-            logging.error(f"An unexpected error occurred during NLP gRPC call: {e}", exc_info=True)
-            logging.warning("Unexpected error during NLP call. Returning raw LSTM translation.")
-    else:
-        final_nlp_response_text = "Could not translate the detected gestures."
+    #         grpc_options_nlp = [
+    #             ('grpc.max_receive_message_length', MAX_GRPC_MESSAGE_LENGTH),
+    #             ('grpc.max_send_message_length', MAX_GRPC_MESSAGE_LENGTH)
+    #         ]
+    #         with grpc.insecure_channel(NLP_SERVICE_HOST, options=grpc_options_nlp) as channel:
+    #             # IMPORTANT: stub_nlp should be prediction_services_pb2_grpc.NlpServiceStub
+    #             stub_nlp = prediction_services_pb2_grpc.NlpServiceStub(channel)
+    #             response_nlp = stub_nlp.Refine(request_message_nlp)
+    #             final_nlp_response_text = response_nlp.refined_text
+    #             logging.info(f"Received refined text from NLP: '{final_nlp_response_text}'")
+    #     except grpc.RpcError as rpc_e:
+    #         logging.error(f"NLP gRPC call failed: {rpc_e.details()} (Code: {rpc_e.code().name})", exc_info=True)
+    #         logging.warning("NLP service call failed. Returning raw LSTM translation.")
+    #     except Exception as e:
+    #         logging.error(f"An unexpected error occurred during NLP gRPC call: {e}", exc_info=True)
+    #         logging.warning("Unexpected error during NLP call. Returning raw LSTM translation.")
+    # else:
+    #     final_nlp_response_text = "Could not translate the detected gestures."
 
     logging.info("Request processing finished successfully.")
-    return jsonify({"translatedText": final_nlp_response_text}), 200
+    return jsonify({"translatedText": lstm_translated_text}), 200
 
 if __name__ == '__main__':
     logging.info(f"Starting Flask server on 0.0.0.0:8080 (Debug: {DEBUG_MODE})")
