@@ -15,10 +15,8 @@ from sklearn.model_selection import train_test_split
 from utils import load_config, save_config, pad_or_truncate_sequence
 from sklearn.metrics import confusion_matrix, precision_score, f1_score, recall_score
 
-# --- Configure Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- Configuration (can be overridden by CLI arguments) ---
 DEFAULT_CONFIG = {
     'data_dir': 'processed_data',
     'output_model_dir': 'models',
@@ -92,7 +90,7 @@ if __name__ == "__main__":
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         save_config(config, os.path.join(config['output_model_dir'], f"config_{timestamp}.json"))
 
-    # --- Data Loading and Preparation ---
+    # Data Loading and Preparation ---
     logging.info(f"Loading data from: {config['data_dir']}")
     all_data_paths = glob.glob(os.path.join(config['data_dir'], '**', '*.npy'), recursive=True)
     
@@ -145,7 +143,7 @@ if __name__ == "__main__":
     logging.info(f"Testing samples: {X_test.shape[0]}")
     logging.info(f"Number of classes: {num_classes}")
 
-    # --- Model Initialization ---
+    # Model Initialization
     input_shape = (config['sequence_length'], config['feature_dim'])
     model = build_bilstm_classifier(
         input_shape=input_shape,
@@ -163,7 +161,7 @@ if __name__ == "__main__":
 
     model.summary(print_fn=logging.info) # Direct model summary to logging
 
-    # --- Callbacks ---
+    # Callbacks
     log_csv_path = os.path.join(config['output_model_dir'], config['log_file_name'])
     csv_logger = callbacks.CSVLogger(log_csv_path, append=True)
 
@@ -184,7 +182,7 @@ if __name__ == "__main__":
         verbose=1
     )
 
-    # --- Training ---
+    # Training
     logging.info("\n--- Starting Training ---")
     history = model.fit(
         X_train_val, y_train_val,
@@ -196,7 +194,7 @@ if __name__ == "__main__":
     )
     logging.info("--- Training Complete ---")
 
-    # --- Evaluation ---
+    # Evaluation
     logging.info("\n--- Starting Evaluation ---")
     # Load the best model weights if saved by ModelCheckpoint
     if os.path.exists(model_checkpoint_path):
@@ -221,7 +219,7 @@ if __name__ == "__main__":
     logging.info(f"Overall Test Recall: {overall_recall:.4f}")
     logging.info(f"Overall Test F1-Score: {overall_f1:.4f}")
 
-    # --- Plot Training History ---
+    # Plot Training History
     logging.info("\n--- Plotting Training History ---")
     
     # Plot accuracy
@@ -250,7 +248,7 @@ if __name__ == "__main__":
     plt.savefig(history_plot_path)
     logging.info(f"Training history plot saved to {history_plot_path}")
 
-    # --- Generate Confusion Matrix ---
+    # Generate Confusion Matrix
     logging.info("\n--- Generating Confusion Matrix ---")
     cm = confusion_matrix(y_test, y_pred)
     
