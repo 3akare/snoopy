@@ -302,7 +302,7 @@ export default function Home() {
             const res = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ keypoints: finalSequence }),
+                body: JSON.stringify({ keypoints: [finalSequence] }),
             });
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({ message: "Unknown server error" }));
