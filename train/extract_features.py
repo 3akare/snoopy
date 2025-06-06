@@ -72,18 +72,24 @@ def extract_keypoints(frame: np.ndarray, hands_model: mp.solutions.hands.Hands):
             label = handedness_info.label # 'Left' or 'Right' (from the user's perspective)
 
             if score > MIN_HAND_DETECTION_CONFIDENCE:
-                keypoints = []
+                wrist_landmark = hand_landmarks.landmark[0]
+                wrist_x, wrist_y, wrist_z = wrist_landmark.x, wrist_landmark.y, wrist_landmark.z
+                normalized_keypoints = []
                 for landmark in hand_landmarks.landmark:
-                    keypoints.extend([landmark.x, landmark.y, landmark.z])
+                    normalized_keypoints.extend([
+                        landmark.x - wrist_x,
+                        landmark.y - wrist_y,
+                        landmark.z - wrist_z
+                    ])
 
                 # Validate if all expected landmarks are present and if keypoints are mostly non-zero
-                if len(keypoints) == NUM_FEATURES_PER_HAND:
-                    non_zero_count = np.count_nonzero(keypoints)
-                    if non_zero_count / len(keypoints) >= MIN_NON_ZERO_KEYPOINTS_RATIO:
+                if len(normalized_keypoints) == NUM_FEATURES_PER_HAND:
+                    non_zero_count = np.count_nonzero(normalized_keypoints)
+                    if non_zero_count / len(normalized_keypoints) >= MIN_NON_ZERO_KEYPOINTS_RATIO:
                         if label == 'Left':
-                            left_hand_keypoints = keypoints
+                            left_hand_keypoints = normalized_keypoints
                         elif label == 'Right':
-                            right_hand_keypoints = keypoints
+                            right_hand_keypoints = normalized_keypoints
                     else:
                         logging.debug(f"Skipping hand due to too many zero keypoints ({non_zero_count}/{len(keypoints)}).")
                 else:

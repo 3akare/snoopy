@@ -52,55 +52,49 @@ export default function Home() {
     }, []);
 
     const onResults = useCallback((results: HandsModule.Results) => {
-        // You can keep or remove the raw results log based on your preference;
-        // it's commented out here for a cleaner console by default.
         // console.log('MediaPipe Raw Results:', JSON.parse(JSON.parse(JSON.stringify(results))));
-
         if (!videoRef.current) return;
-
         let handsDetectedThisFrame = 0;
         // Initialize these with placeholder data (zeros)
         let userLeftHandKps: number[] = Array(NUM_HAND_LANDMARKS * 3).fill(0.0);
         let userRightHandKps: number[] = Array(NUM_HAND_LANDMARKS * 3).fill(0.0);
-
         // New variable to collect all valid detected hand keypoints for this specific frame
-        let collectedFrameKeypoints: number[] = []; 
+        let collectedFrameKeypoints: number[] = [];
 
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && results.multiHandedness) {
-            // console.log(`MediaPipe detected ${results.multiHandLandmarks.length} potential hand(s) in raw results.`);
-
             for (let i = 0; i < results.multiHandLandmarks.length; i++) {
                 const landmarks = results.multiHandLandmarks[i];
                 const handednessEntry = results.multiHandedness[i];
-                
-                // console.log(`DEBUG_HANDEDNESS: Hand ${i} Handedness Entry:`, JSON.parse(JSON.stringify(handednessEntry)));
-
                 const handLabel = (handednessEntry as any).label as string;
                 const confidence = (handednessEntry as any).score as number;
 
                 if (typeof handLabel !== 'string' || typeof confidence !== 'number') {
                     // console.warn(`DEBUG_HAND_SKIP: Hand ${i}: Invalid label or score found in handedness entry. Skipping.`);
-                    continue; // Skip this hand if label or score is missing/invalid
+                    continue;
                 }
 
                 console.log(`DEBUG_HAND_CHECK: Hand ${i} - Label: '${handLabel}', Confidence: ${confidence.toFixed(3)}, Required Min Conf: ${MIN_DETECTION_CONFIDENCE}`);
 
                 if (confidence >= MIN_DETECTION_CONFIDENCE && (handLabel === "Left" || handLabel === "Right")) {
-                    // console.log(`DEBUG_HAND_PASS: Hand ${i} ('${handLabel}') PASSED all checks. Extracting landmarks and incrementing count.`);
-                    const flatLandmarks = landmarks.map((lm: HandsModule.NormalizedLandmark) => [lm.x, lm.y, lm.z]).flat();
-
-                    // --- FIX FOR LEFT/RIGHT MISTAKING ---
-                    // If the camera feed is mirrored (due to -scale-x-100 on video element),
-                    // MediaPipe's 'Left' detection corresponds to your physical RIGHT hand,
-                    // and MediaPipe's 'Right' detection corresponds to your physical LEFT hand.
-                    // We swap the assignments here to ensure userLeftHandKps holds your actual left hand's data, etc.
-                    if (handLabel === "Right") { // If MediaPipe detects 'Right', it's your physical LEFT hand
-                        userLeftHandKps = flatLandmarks;
-                    } else if (handLabel === "Left") { // If MediaPipe detects 'Left', it's your physical RIGHT hand
-                        userRightHandKps = flatLandmarks;
-                    }
                     handsDetectedThisFrame++;
-                    collectedFrameKeypoints.push(...flatLandmarks);
+                    const wristLandmark = landmarks[0];
+                    if (!wristLandmark) continue;
+
+                    const wristX = wristLandmark.x;
+                    const wristY = wristLandmark.y;
+                    const wristZ = wristLandmark.z;
+                    const normalizedLandmarks = landmarks.map(lm => [
+                        lm.x - wristX,
+                        lm.y - wristY,
+                        lm.z - wristZ
+                    ]).flat();
+
+                    if (handLabel === "Right") { // If MediaPipe detects 'Right', it's your physical LEFT hand
+                        userLeftHandKps = normalizedLandmarks;
+                    } else if (handLabel === "Left") { // If MediaPipe detects 'Left', it's your physical RIGHT hand
+                        userRightHandKps = normalizedLandmarks;
+                    }
+                    collectedFrameKeypoints.push(...normalizedLandmarks);
                 } else {
                     // Debug logs for failed checks are commented out for cleaner console
                     // let skipReason = [];
@@ -117,17 +111,21 @@ export default function Home() {
             // console.log('DEBUG_HAND_NO_RAW: MediaPipe did not detect any hands in raw results (multiHandLandmarks is null/empty).');
         }
 
-        setHandsDetected(handsDetectedThisFrame); // Update state for UI display (Hands Detected: X)
+        setHandsDetected(handsDetectedThisFrame);
+
+        const currentFrameCombinedKeypoints = [...userLeftHandKps, ...userRightHandKps];
 
         if (state === "recording") {
-            if (collectedFrameKeypoints.length > 0) {
-                recordedKeypointsRef.current.push(collectedFrameKeypoints);
+            // Only push if there was at least one hand detected that contributed non-zero data
+            // This prevents recording entirely blank frames (if no hands or poor quality hands)
+            if (currentFrameCombinedKeypoints.some(k => k !== 0.0)) {
+                recordedKeypointsRef.current.push(currentFrameCombinedKeypoints); // Push the 126-feature array
                 setKeypointsCount(recordedKeypointsRef.current.length);
-            } else {
-                // If you want to record frames even when no hands are detected (e.g., to keep timing),
-                // you could push an empty array: recordedKeypointsRef.current.push([]);
-                // However, for "no hand gestures detected" error, it's generally better to only push valid data.
             }
+            // If you need to record every frame (even blank ones) to maintain exact timing,
+            // you could instead push `currentFrameCombinedKeypoints` unconditionally here:
+            // else { recordedKeypointsRef.current.push(currentFrameCombinedKeypoints); }
+            // But based on "no gestures detected" error, it's better to record meaningful data.
         }
     }, [state, MIN_DETECTION_CONFIDENCE]);
 
@@ -141,7 +139,7 @@ export default function Home() {
 
                 await handsRef.current.setOptions({
                     maxNumHands: 2,
-                    modelComplexity: 1, // You can try 0 here if performance is an issue for detection
+                    modelComplexity: 1,
                     minDetectionConfidence: MIN_DETECTION_CONFIDENCE,
                     minTrackingConfidence: MIN_TRACKING_CONFIDENCE,
                 });
@@ -261,10 +259,9 @@ export default function Home() {
 
     const stopRecording = useCallback(() => {
         console.log('Stopping recording and turning off camera...');
-        if (mediaRecorderRef.current && (mediaRecorderRef.current.state === 'recording' || mediaRecorderRef.current.state === 'paused')) {
-            mediaRecorderRef.current.stop(); // Triggers onstop, which sets state to "ready"
-        } else {
-            if (state === "recording") setState("ready");
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.onstop = null;
+            mediaRecorderRef.current.stop();
         }
 
         if (cameraRef.current) { // Stop MediaPipe's camera utility
@@ -282,7 +279,10 @@ export default function Home() {
             videoRef.current.srcObject = null;
             videoRef.current.load(); // Reset video element
         }
-    }, [state]);
+
+        setState("ready");
+        console.log(`Recording stopped. Total keypoint frames: ${recordedKeypointsRef.current.length}`);
+    }, []);
 
     const sendRecording = useCallback(async () => {
         if (!recordedBlobRef.current && recordedKeypointsRef.current.length === 0) {
@@ -388,11 +388,16 @@ export default function Home() {
         if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
         if (videoRef.current) { videoRef.current.srcObject = null; videoRef.current.load(); }
 
-        recordedBlobRef.current = null; chunksRef.current = []; recordedKeypointsRef.current = [];
-        setTranslatedText(""); setError(""); setHighlightedIndex(-1); setIsPlaying(false);
-        setHandsDetected(0); setKeypointsCount(0); // Reset UI counters
+        recordedBlobRef.current = null;
+        chunksRef.current = [];
+        recordedKeypointsRef.current = [];
+        setTranslatedText("");
+        setError("");
+        setHighlightedIndex(-1);
+        setIsPlaying(false);
+        setHandsDetected(0);
+        setKeypointsCount(0);
         setState("default");
-        // toast.info("Recorder reset.", { duration: 1500 });
     }, []);
 
     return (
