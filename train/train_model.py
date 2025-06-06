@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 DEFAULT_CONFIG = {
     'data_dir': 'processed_data',
-    'output_model_dir': 'models',
+    'output_model_dir': '../lstm/models',
     'log_file_name': 'training_log.csv',
     'epochs': 50,
     'batch_size': 32,
@@ -107,6 +107,11 @@ if __name__ == "__main__":
     label_to_idx = {label: i for i, label in enumerate(unique_labels)}
     idx_to_label = {i: label for label, i in label_to_idx.items()}
     num_classes = len(unique_labels)
+
+    label_map_path = os.path.join(config['output_model_dir'], 'label_map.json')
+    with open(label_map_path, 'w') as f:
+        json.dump(idx_to_label, f, indent=4)
+    logging.info(f"Label mapping saved to {label_map_path}")
 
     for path in all_data_paths:
         try:
