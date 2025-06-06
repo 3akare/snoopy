@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package services;
+
+// Represents a single frame of keypoints (e.g., 126 float values).
+// This corresponds to one of the inner arrays in your keypoints data.
+message KeypointFrame {
+  repeated float keypoints = 1;
+}
+
+// =================== LSTM Service ===================
+// Defines the prediction service that runs the LSTM model.
+service LstmService {
+  // A simple RPC call that takes a sequence and returns a prediction.
+  rpc Predict(LstmRequest) returns (LstmResponse);
+}
+
+// The request message for the LstmService.
+message LstmRequest {
+  // Contains a sequence of keypoint frames.
+  // This directly maps to the list of lists structure, e.g., 80 frames of 126 keypoints.
+  repeated KeypointFrame sequence = 1;
+}
+
+// The response message from the LstmService.
+message LstmResponse {
+  string translated_text = 1;
+}
+
+
+// =================== NLP Service ===================
+// Defines the text processing service that refines the prediction.
+service NlpService {
+  // A simple RPC call that takes raw text and returns a refined version.
+  rpc Refine(NlpRequest) returns (NlpResponse);
+}
+
+// The request message for the NlpService.
+message NlpRequest {
+  string raw_text = 1;
+}
+
+// The response message from the NlpService.
+message NlpResponse {
+  string refined_text = 1;
+}
