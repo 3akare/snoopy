@@ -11,7 +11,7 @@ from concurrent import futures
 
 
 # Configuration
-MAX_MESSAGE_LENGTH = 1024 * 1024 * 50  # 50 MB
+MAX_MESSAGE_LENGTH = 1024 * 1024 * 50
 MODEL_DIR = os.path.dirname(__file__)
 MODEL_PATH = os.path.join(MODEL_DIR, 'models', 'best_model_tf.keras')
 LABEL_MAP_PATH = os.path.join(MODEL_DIR, 'models', 'label_map.json')

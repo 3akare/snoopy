@@ -100,33 +100,33 @@ def predict_from_keypoints():
         return jsonify({"message": "An unexpected error occurred during sign language translation."}), 500
 
     # NLP gRPC Call (re-enabled and adjusted based on current design)
-    # final_nlp_response_text = lstm_translated_text
-    # if lstm_translated_text and lstm_translated_text.strip(): 
-    #     try:
-    #         logging.info(f"Sending translated text to NLP gRPC service at {NLP_SERVICE_HOST}...")
-    #         request_message_nlp = prediction_services_pb2.NlpRequest(raw_text=lstm_translated_text)
+    final_nlp_response_text = lstm_translated_text
+    if lstm_translated_text and lstm_translated_text.strip(): 
+        try:
+            logging.info(f"Sending translated text to NLP gRPC service at {NLP_SERVICE_HOST}...")
+            request_message_nlp = prediction_services_pb2.NlpRequest(raw_text=lstm_translated_text)
             
-    #         grpc_options_nlp = [
-    #             ('grpc.max_receive_message_length', MAX_GRPC_MESSAGE_LENGTH),
-    #             ('grpc.max_send_message_length', MAX_GRPC_MESSAGE_LENGTH)
-    #         ]
-    #         with grpc.insecure_channel(NLP_SERVICE_HOST, options=grpc_options_nlp) as channel:
-    #             # IMPORTANT: stub_nlp should be prediction_services_pb2_grpc.NlpServiceStub
-    #             stub_nlp = prediction_services_pb2_grpc.NlpServiceStub(channel)
-    #             response_nlp = stub_nlp.Refine(request_message_nlp)
-    #             final_nlp_response_text = response_nlp.refined_text
-    #             logging.info(f"Received refined text from NLP: '{final_nlp_response_text}'")
-    #     except grpc.RpcError as rpc_e:
-    #         logging.error(f"NLP gRPC call failed: {rpc_e.details()} (Code: {rpc_e.code().name})", exc_info=True)
-    #         logging.warning("NLP service call failed. Returning raw LSTM translation.")
-    #     except Exception as e:
-    #         logging.error(f"An unexpected error occurred during NLP gRPC call: {e}", exc_info=True)
-    #         logging.warning("Unexpected error during NLP call. Returning raw LSTM translation.")
-    # else:
-    #     final_nlp_response_text = "Could not translate the detected gestures."
+            grpc_options_nlp = [
+                ('grpc.max_receive_message_length', MAX_GRPC_MESSAGE_LENGTH),
+                ('grpc.max_send_message_length', MAX_GRPC_MESSAGE_LENGTH)
+            ]
+            with grpc.insecure_channel(NLP_SERVICE_HOST, options=grpc_options_nlp) as channel:
+                # IMPORTANT: stub_nlp should be prediction_services_pb2_grpc.NlpServiceStub
+                stub_nlp = prediction_services_pb2_grpc.NlpServiceStub(channel)
+                response_nlp = stub_nlp.Refine(request_message_nlp)
+                final_nlp_response_text = response_nlp.refined_text
+                logging.info(f"Received refined text from NLP: '{final_nlp_response_text}'")
+        except grpc.RpcError as rpc_e:
+            logging.error(f"NLP gRPC call failed: {rpc_e.details()} (Code: {rpc_e.code().name})", exc_info=True)
+            logging.warning("NLP service call failed. Returning raw LSTM translation.")
+        except Exception as e:
+            logging.error(f"An unexpected error occurred during NLP gRPC call: {e}", exc_info=True)
+            logging.warning("Unexpected error during NLP call. Returning raw LSTM translation.")
+    else:
+        final_nlp_response_text = "Could not translate the detected gestures."
 
     logging.info("Request processing finished successfully.")
-    return jsonify({"translatedText": lstm_translated_text}), 200
+    return jsonify({"translatedText": final_nlp_response_text}), 200
 
 if __name__ == '__main__':
     logging.info(f"Starting Flask server on 0.0.0.0:8080 (Debug: {DEBUG_MODE})")
