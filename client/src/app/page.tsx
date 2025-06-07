@@ -9,9 +9,6 @@ import ControlDock from "@/app/components/ControlDock"
 import * as HandsModule from "@mediapipe/hands";
 import * as CameraUtilsModule from "@mediapipe/camera_utils";
 
-const FEATURE_DIM = 126;
-const SEQUENCE_LENGTH = 80;
-
 const MIN_DETECTION_CONFIDENCE = 0.7;
 const MIN_TRACKING_CONFIDENCE = 0.7;
 const NUM_HAND_LANDMARKS = 21;
@@ -39,16 +36,6 @@ export default function Home() {
 
     const textContainerRef = useRef<HTMLDivElement>(null);
     const wordsRef = useRef<string[]>([]);
-
-    const padOrTruncateSequence = useCallback((sequence: number[][], targetLength: number): number[][] => {
-        if (sequence.length > targetLength) {
-            return sequence.slice(0, targetLength);
-        } else if (sequence.length < targetLength) {
-            const padding = Array(targetLength - sequence.length).fill(Array(FEATURE_DIM).fill(0.0));
-            return [...sequence, ...padding];
-        }
-        return sequence;
-    }, []);
 
     const onResults = useCallback((results: HandsModule.Results) => {
         // console.log('MediaPipe Raw Results:', JSON.parse(JSON.parse(JSON.stringify(results))));
@@ -296,13 +283,12 @@ export default function Home() {
         }
         setState("loading");
         try {
-            const finalSequence = padOrTruncateSequence(recordedKeypointsRef.current, SEQUENCE_LENGTH);
-            console.log(finalSequence)
+            console.log("====>", recordedKeypointsRef.current)
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/predict_gesture";
             const res = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ keypoints: [finalSequence] }),
+                body: JSON.stringify({ keypoints: [recordedKeypointsRef.current] }),
             });
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({ message: "Unknown server error" }));
@@ -319,7 +305,7 @@ export default function Home() {
             toast.error("Prediction failed. " + (err.message || "Unknown error."), { duration: 5000 });
             resetRecorder(); // Reset on send error
         }
-    }, [padOrTruncateSequence]); // Added resetRecorder to dependency array
+    }, []);
 
     const playTranslatedText = useCallback(() => {
         if (!translatedText || typeof window.speechSynthesis === 'undefined') return;
