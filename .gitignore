@@ -3,3 +3,4 @@ raw_videos/
 __pycache__/
 processed_data/
 .DS_Store
+.env
