@@ -91,9 +91,9 @@ def extract_keypoints(frame: np.ndarray, hands_model: mp.solutions.hands.Hands):
                         elif label == 'Right':
                             right_hand_keypoints = normalized_keypoints
                     else:
-                        logging.debug(f"Skipping hand due to too many zero keypoints ({non_zero_count}/{len(keypoints)}).")
+                        logging.debug(f"Skipping hand due to too many zero keypoints ({non_zero_count}/{len(normalized_keypoints)}).")
                 else:
-                    logging.debug(f"Skipping hand due to incorrect number of keypoints detected ({len(keypoints)} != {NUM_FEATURES_PER_HAND}).")
+                    logging.debug(f"Skipping hand due to incorrect number of keypoints detected ({len(normalized_keypoints)} != {NUM_FEATURES_PER_HAND}).")
 
     return left_hand_keypoints, right_hand_keypoints, num_hands_detected
 

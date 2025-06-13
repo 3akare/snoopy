@@ -149,4 +149,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Call the modified record_gesture function
-    record_gesture(args.label, args.num_recordings, args.duration, args.output_dir)
+    record_gestures(args.label, args.num_recordings, args.duration, args.output_dir)
