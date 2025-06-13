@@ -44,9 +44,6 @@ export default function Home() {
         // Initialize these with placeholder data (zeros)
         let userLeftHandKps: number[] = Array(NUM_HAND_LANDMARKS * 3).fill(0.0);
         let userRightHandKps: number[] = Array(NUM_HAND_LANDMARKS * 3).fill(0.0);
-        // New variable to collect all valid detected hand keypoints for this specific frame
-        let collectedFrameKeypoints: number[] = [];
-
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && results.multiHandedness) {
             for (let i = 0; i < results.multiHandLandmarks.length; i++) {
                 const landmarks = results.multiHandLandmarks[i];
@@ -54,10 +51,6 @@ export default function Home() {
                 const handLabel = (handednessEntry as any).label as string;
                 const confidence = (handednessEntry as any).score as number;
 
-                if (typeof handLabel !== 'string' || typeof confidence !== 'number') {
-                    // console.warn(`DEBUG_HAND_SKIP: Hand ${i}: Invalid label or score found in handedness entry. Skipping.`);
-                    continue;
-                }
 
                 console.log(`DEBUG_HAND_CHECK: Hand ${i} - Label: '${handLabel}', Confidence: ${confidence.toFixed(3)}, Required Min Conf: ${MIN_DETECTION_CONFIDENCE}`);
 
@@ -75,26 +68,13 @@ export default function Home() {
                         lm.z - wristZ
                     ]).flat();
 
-                    if (handLabel === "Right") { // If MediaPipe detects 'Right', it's your physical LEFT hand
+                    if (handLabel === "Left") {
                         userLeftHandKps = normalizedLandmarks;
-                    } else if (handLabel === "Left") { // If MediaPipe detects 'Left', it's your physical RIGHT hand
+                    } else if (handLabel === "Right") {
                         userRightHandKps = normalizedLandmarks;
                     }
-                    collectedFrameKeypoints.push(...normalizedLandmarks);
-                } else {
-                    // Debug logs for failed checks are commented out for cleaner console
-                    // let skipReason = [];
-                    // if (confidence < MIN_DETECTION_CONFIDENCE) {
-                    //     skipReason.push(`Confidence (${confidence.toFixed(3)}) < ${MIN_DETECTION_CONFIDENCE}`);
-                    // }
-                    // if (!(handLabel === "Left" || handLabel === "Right")) {
-                    //     skipReason.push(`Label ('${handLabel}') is not 'Left' or 'Right'`);
-                    // }
-                    // console.log(`DEBUG_HAND_FAIL: Hand ${i} FAILED checks due to: ${skipReason.join(' AND/OR ')}.`);
-                }
+                } 
             }
-        } else {
-            // console.log('DEBUG_HAND_NO_RAW: MediaPipe did not detect any hands in raw results (multiHandLandmarks is null/empty).');
         }
 
         setHandsDetected(handsDetectedThisFrame);
@@ -108,12 +88,8 @@ export default function Home() {
                 recordedKeypointsRef.current.push(currentFrameCombinedKeypoints); // Push the 126-feature array
                 setKeypointsCount(recordedKeypointsRef.current.length);
             }
-            // If you need to record every frame (even blank ones) to maintain exact timing,
-            // you could instead push `currentFrameCombinedKeypoints` unconditionally here:
-            // else { recordedKeypointsRef.current.push(currentFrameCombinedKeypoints); }
-            // But based on "no gestures detected" error, it's better to record meaningful data.
         }
-    }, [state, MIN_DETECTION_CONFIDENCE]);
+    }, [state]);
 
 
     useEffect(() => {
