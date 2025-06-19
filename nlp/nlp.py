@@ -27,7 +27,6 @@ class NlpPredictionService(prediction_services_pb2_grpc.LstmServiceServicer):
             if not input_text:
                 logging.warning("NLP service received empty or whitespace-only request data.")
                 return prediction_services_pb2.NlpResponse(refined_text="")
-
             response_text = refine_text.refine_text(input_text)
             logging.info(f"NLP processed response: \"{response_text}\"")
             return prediction_services_pb2.NlpResponse(refined_text=response_text)
