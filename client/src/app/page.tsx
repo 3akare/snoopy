@@ -24,10 +24,7 @@ export default function Home() {
     const [handsDetected, setHandsDetected] = useState<number>(0);
     const [keypointsCount, setKeypointsCount] = useState<number>(0);
 
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
-    const chunksRef = useRef<Blob[]>([]);
-    const recordedBlobRef = useRef<Blob | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
     const handsRef = useRef<HandsModule.Hands | null>(null);
@@ -38,10 +35,8 @@ export default function Home() {
     const wordsRef = useRef<string[]>([]);
 
     const onResults = useCallback((results: HandsModule.Results) => {
-        // console.log('MediaPipe Raw Results:', JSON.parse(JSON.parse(JSON.stringify(results))));
         if (!videoRef.current) return;
         let handsDetectedThisFrame = 0;
-        // Initialize these with placeholder data (zeros)
         let userLeftHandKps: number[] = Array(NUM_HAND_LANDMARKS * 3).fill(0.0);
         let userRightHandKps: number[] = Array(NUM_HAND_LANDMARKS * 3).fill(0.0);
         if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0 && results.multiHandedness) {
@@ -50,9 +45,6 @@ export default function Home() {
                 const handednessEntry = results.multiHandedness[i];
                 const handLabel = (handednessEntry as any).label as string;
                 const confidence = (handednessEntry as any).score as number;
-
-
-                console.log(`DEBUG_HAND_CHECK: Hand ${i} - Label: '${handLabel}', Confidence: ${confidence.toFixed(3)}, Required Min Conf: ${MIN_DETECTION_CONFIDENCE}`);
 
                 if (confidence >= MIN_DETECTION_CONFIDENCE && (handLabel === "Left" || handLabel === "Right")) {
                     handsDetectedThisFrame++;
@@ -73,19 +65,14 @@ export default function Home() {
                     } else if (handLabel === "Right") {
                         userRightHandKps = normalizedLandmarks;
                     }
-                } 
+                }
             }
         }
-
         setHandsDetected(handsDetectedThisFrame);
-
         const currentFrameCombinedKeypoints = [...userLeftHandKps, ...userRightHandKps];
-
         if (state === "recording") {
-            // Only push if there was at least one hand detected that contributed non-zero data
-            // This prevents recording entirely blank frames (if no hands or poor quality hands)
             if (currentFrameCombinedKeypoints.some(k => k !== 0.0)) {
-                recordedKeypointsRef.current.push(currentFrameCombinedKeypoints); // Push the 126-feature array
+                recordedKeypointsRef.current.push(currentFrameCombinedKeypoints);
                 setKeypointsCount(recordedKeypointsRef.current.length);
             }
         }
@@ -125,10 +112,10 @@ export default function Home() {
 
     const startRecording = useCallback(async () => {
         setError(""); setTranslatedText(""); setHighlightedIndex(-1); setIsPlaying(false);
-        setHandsDetected(0); setKeypointsCount(0); // Reset UI counters
-        chunksRef.current = []; recordedKeypointsRef.current = [];
+        setHandsDetected(0); setKeypointsCount(0);
+        recordedKeypointsRef.current = [];
 
-        setState("initializing"); // Set state to initializing
+        setState("initializing");
 
         try {
             console.log('Requesting camera access...');
@@ -142,9 +129,8 @@ export default function Home() {
             });
             streamRef.current = stream;
 
-            // Wait for videoRef.current to be available (if component not fully rendered)
             let attempts = 0;
-            const maxAttempts = 50; // 5 seconds timeout
+            const maxAttempts = 50;
             while (!videoRef.current && attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
@@ -156,9 +142,8 @@ export default function Home() {
 
             videoRef.current.srcObject = stream;
 
-            // Wait for video metadata to load
             await new Promise<void>((resolve, reject) => {
-                const timeoutId = setTimeout(() => reject(new Error('Video metadata load timeout')), 10000); // 10 seconds timeout
+                const timeoutId = setTimeout(() => reject(new Error('Video metadata load timeout')), 10000);
                 if (!videoRef.current) { clearTimeout(timeoutId); reject(new Error("Video element became null.")); return; }
                 if (videoRef.current.readyState >= HTMLMediaElement.HAVE_METADATA) { clearTimeout(timeoutId); resolve(); return; }
                 videoRef.current.onloadedmetadata = () => { clearTimeout(timeoutId); resolve(); };
@@ -168,32 +153,13 @@ export default function Home() {
             if (!videoRef.current) throw new Error("Video element became null before play.");
             await videoRef.current.play();
             console.log('Video stream started:', { width: videoRef.current?.videoWidth, height: videoRef.current?.videoHeight });
-            await new Promise(resolve => setTimeout(resolve, 200)); // Small delay for stream stabilization
-
-            const supportedTypes = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
-            let mimeType = supportedTypes.find(type => MediaRecorder.isTypeSupported(type)) || 'video/webm';
-
-            const mediaRecorder = new MediaRecorder(stream, { mimeType });
-            mediaRecorderRef.current = mediaRecorder;
-
-            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-            mediaRecorder.onstop = () => {
-                if (chunksRef.current.length > 0) { recordedBlobRef.current = new Blob(chunksRef.current, { type: mimeType }); }
-                else { recordedBlobRef.current = null; console.warn("No data chunks recorded."); }
-                console.log(`Recording stopped. Total keypoint frames: ${recordedKeypointsRef.current.length}`);
-                setState("ready"); // Transition to ready state
-            };
-            mediaRecorder.onerror = (event: Event) => {
-                console.error('MediaRecorder error:', event); setError("MediaRecorder error."); setState("error");
-                toast.error("Recording error.", { duration: 3000 });
-            };
+            await new Promise(resolve => setTimeout(resolve, 200));
 
             if (!handsRef.current) throw new Error('MediaPipe Hands not ready. Initialization failed.');
             if (!videoRef.current) throw new Error('Video element unavailable for MediaPipe camera.');
 
             cameraRef.current = new CameraUtilsModule.Camera(videoRef.current, {
                 onFrame: async () => {
-                    // Only send image to MediaPipe if video is ready and hands model is loaded
                     if (handsRef.current && videoRef.current && videoRef.current.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
                         try { await handsRef.current.send({ image: videoRef.current }); }
                         catch (frameError) { console.error('Error sending frame to MediaPipe:', frameError); }
@@ -201,45 +167,40 @@ export default function Home() {
                 },
             });
 
-            await cameraRef.current.start(); // Start MediaPipe's camera processing
-            await new Promise(resolve => setTimeout(resolve, 100)); // Small delay after camera start
+            await cameraRef.current.start();
+            await new Promise(resolve => setTimeout(resolve, 100));
 
-            mediaRecorder.start(100); // Start recording (collects data every 100ms)
-            setState("recording"); // Transition to recording state
+            setState("recording");
             toast.info("Recording started!", { duration: 3000 });
 
         } catch (err) {
             const errorMessage = (err instanceof Error ? err.message : String(err)) || "Unknown setup error.";
             console.error('Start recording error:', err); setError(errorMessage); setState("error");
             toast.error(`Error: ${errorMessage}`, { duration: 5000 });
-            // Clean up resources if an error occurs during setup
+
             if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
             if (videoRef.current) videoRef.current.srcObject = null;
             if (cameraRef.current) { cameraRef.current.stop(); cameraRef.current = null; }
         }
     }, []);
 
+
     const stopRecording = useCallback(() => {
         console.log('Stopping recording and turning off camera...');
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-            mediaRecorderRef.current.onstop = null;
-            mediaRecorderRef.current.stop();
-        }
 
-        if (cameraRef.current) { // Stop MediaPipe's camera utility
+        if (cameraRef.current) {
             cameraRef.current.stop();
-            cameraRef.current = null; // Clear ref after stopping
+            cameraRef.current = null;
         }
 
-        // Stop the actual camera stream tracks
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
         }
-        // Clear the video element's source
+        
         if (videoRef.current) {
             videoRef.current.srcObject = null;
-            videoRef.current.load(); // Reset video element
+            videoRef.current.load();
         }
 
         setState("ready");
@@ -247,11 +208,8 @@ export default function Home() {
     }, []);
 
     const sendRecording = useCallback(async () => {
-        if (!recordedBlobRef.current && recordedKeypointsRef.current.length === 0) {
-            toast.error("No recording/keypoints to send.", { duration: 3000 }); resetRecorder(); return;
-        }
         if (recordedKeypointsRef.current.length === 0) {
-            toast.error("No keypoints. Ensure hands are visible.", { duration: 3000 }); resetRecorder(); return;
+            toast.error("No recording/keypoints to send.", { duration: 3000 }); resetRecorder(); return;
         }
         const hasValidKeypoints = recordedKeypointsRef.current.some(f => f.some(v => Math.abs(v) > 0.001));
         if (!hasValidKeypoints) {
@@ -264,7 +222,7 @@ export default function Home() {
             const res = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ keypoints: [recordedKeypointsRef.current] }),
+                body: JSON.stringify({ keypoints: recordedKeypointsRef.current }),
             });
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({ message: "Unknown server error" }));
@@ -279,7 +237,7 @@ export default function Home() {
             setError(err.message || "Failed to process keypoints. Please try again.");
             setState("error");
             toast.error("Prediction failed. " + (err.message || "Unknown error."), { duration: 5000 });
-            resetRecorder(); // Reset on send error
+            resetRecorder();
         }
     }, []);
 
@@ -294,7 +252,7 @@ export default function Home() {
                 let currentWordIndex = 0;
                 let charCount = 0;
                 for (let i = 0; i < wordsRef.current.length; i++) {
-                    charCount += wordsRef.current[i].length + 1; // +1 for space
+                    charCount += wordsRef.current[i].length + 1;
                     if (event.charIndex < charCount) {
                         currentWordIndex = i;
                         break;
@@ -321,10 +279,9 @@ export default function Home() {
             else if (attempts < 10) { setTimeout(speakWhenVoicesReady, 100); }
             else { console.warn("No voices loaded after multiple attempts. Speaking with default voice."); window.speechSynthesis.speak(utterance); }
         };
-        // Ensure onvoiceschanged is only set once if needed
         if (window.speechSynthesis.getVoices().length === 0) {
             window.speechSynthesis.onvoiceschanged = () => speakWhenVoicesReady();
-            speakWhenVoicesReady(); // Try speaking immediately too
+            speakWhenVoicesReady();
         } else {
             speakWhenVoicesReady();
         }
@@ -339,18 +296,10 @@ export default function Home() {
 
     const resetRecorder = useCallback(() => {
         if (typeof window.speechSynthesis !== 'undefined') window.speechSynthesis.cancel();
-
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.onstop = null; // Prevent onstop from firing after explicit reset
-            mediaRecorderRef.current.stop();
-            mediaRecorderRef.current = null;
-        }
         if (cameraRef.current) { cameraRef.current.stop(); cameraRef.current = null; }
         if (streamRef.current) { streamRef.current.getTracks().forEach(track => track.stop()); streamRef.current = null; }
         if (videoRef.current) { videoRef.current.srcObject = null; videoRef.current.load(); }
 
-        recordedBlobRef.current = null;
-        chunksRef.current = [];
         recordedKeypointsRef.current = [];
         setTranslatedText("");
         setError("");
