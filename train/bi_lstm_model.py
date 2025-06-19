@@ -1,39 +1,34 @@
 from tensorflow import keras
 from tensorflow.keras import layers, models
 
-def build_bilstm_classifier(input_shape, hidden_size, num_layers, output_dim, dropout_rate):
+def build_ctc_model(input_shape, num_layers, hidden_size, dropout_rate, num_classes):
     """
-    Builds a Bidirectional LSTM classifier model using Keras Functional API.
+    Builds a Bidirectional LSTM model designed for CTC loss.
 
     Args:
-        input_shape (tuple): Shape of the input sequences (sequence_length, feature_dim).
-        hidden_size (int): The number of units in the LSTM layer.
-        num_layers (int): The number of stacked LSTM layers.
-        output_dim (int): The number of output classes.
-        dropout_rate (float): The dropout rate to apply.
+        input_shape (tuple): Shape of input sequences (sequence_length, feature_dim).
+        num_layers (int): Number of stacked LSTM layers.
+        hidden_size (int): Number of units in the LSTM layer.
+        dropout_rate (float): Dropout rate.
+        num_classes (int): Number of output classes (e.g., number of characters in the alphabet).
 
     Returns:
-        tf.keras.Model: The compiled Keras model.
+        tf.keras.Model: The Keras model ready for CTC training.
     """
-    model_input = keras.Input(shape=input_shape)
+    model_input = keras.Input(shape=input_shape, name="input")
     x = model_input
 
     # Stack Bi-LSTM layers
     for i in range(num_layers):
-        # Return sequences for all but the last LSTM layer
-        return_sequences = True if i < num_layers - 1 else False
+        # All layers must return sequences for CTC
         x = layers.Bidirectional(
-            layers.LSTM(hidden_size, return_sequences=return_sequences)
+            layers.LSTM(hidden_size, return_sequences=True, dropout=dropout_rate)
         )(x)
-        # Apply dropout after each LSTM layer (except for the last one before the dense head)
-        if dropout_rate > 0 and return_sequences:
-            x = layers.Dropout(dropout_rate)(x)
 
-    # Apply dropout before the final classification layer if only one layer
-    if dropout_rate > 0 and num_layers == 1:
-        x = layers.Dropout(dropout_rate)(x)
+    # Output layer for CTC: Dense layer with softmax activation.
+    # The number of units is num_classes + 1 to account for the CTC blank token.
+    output = layers.Dense(num_classes + 1, activation='softmax', name='output')(x)
 
-    # Output layer
-    output = layers.Dense(output_dim, activation='softmax')(x)
-    model = models.Model(inputs=model_input, outputs=output, name='BiLSTM_GestureClassifier')
+    # Create the model
+    model = models.Model(inputs=model_input, outputs=output, name='CTC_GestureClassifier')
     return model
