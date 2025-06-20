@@ -1,10 +1,10 @@
 import os
 import grpc
 import logging
-import refine_text
 from concurrent import futures
 from dotenv import load_dotenv
 import prediction_services_pb2
+from nlp_utils import refine_text
 import prediction_services_pb2_grpc
 
 load_dotenv()
@@ -27,7 +27,7 @@ class NlpPredictionService(prediction_services_pb2_grpc.LstmServiceServicer):
             if not input_text:
                 logging.warning("NLP service received empty or whitespace-only request data.")
                 return prediction_services_pb2.NlpResponse(refined_text="")
-            response_text = refine_text.refine_text(input_text)
+            response_text = refine_text(input_text)
             logging.info(f"NLP processed response: \"{response_text}\"")
             return prediction_services_pb2.NlpResponse(refined_text=response_text)
         except Exception as e:

@@ -2,5 +2,6 @@ venv/
 raw_videos/
 __pycache__/
 processed_data/
+backup/
 .DS_Store
 .env

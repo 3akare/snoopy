@@ -37,11 +37,11 @@ def scale_sequence(sequence: np.ndarray, scale_range=(0.8, 1.2)) -> np.ndarray:
 def augment_sequence(sequence: np.ndarray) -> np.ndarray:
     """Applies a random set of augmentations to a sequence."""
     augmented_sequence = sequence.copy()
-    if np.random.rand() < 0.5:
-        augmented_sequence = add_noise(augmented_sequence)
-    if np.random.rand() < 0.5:
-        augmented_sequence = scale_sequence(augmented_sequence)
-    return augmented_sequence
+    if np.random.rand() < 0.8:
+        augmented_sequence = add_noise(augmented_sequence, noise_level=0.05)
+    if np.random.rand() < 0.8:
+        augmented_sequence = scale_sequence(augmented_sequence, scale_range=(0.7, 1.3))
+    return sequence
 
 def data_generator(X_data, y_data, batch_size, augment=False):
     """Generates batches of data with optional on-the-fly augmentation."""

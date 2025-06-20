@@ -25,21 +25,22 @@ DEFAULT_CONFIG = {
     'data_dir': 'processed_data',
     'output_model_dir': '../lstm/models',
     'log_file_name': 'training_log.csv',
-    'epochs': 50,
-    'batch_size': 32,
+    'epochs': 100,          # Keep epochs high to ensure it can overfit
+    'batch_size': 32,       # Smaller batch size for a tiny dataset
     'learning_rate': 0.001,
     'sequence_length': 80,
     'feature_dim': FEATURE_DIM_V3,
     'hidden_size': 256,
     'num_layers': 2,
-    'dropout_rate': 0.3,
-    'test_size': 0.2,
-    'validation_split': 0.2,
+    'dropout_rate': 0.5,   # Dropout must be OFF for this test
+    'test_size': 0.2,      # 10 * 0.2 = 2 samples for test set (1 per class)
+    'validation_split': 0.2, # 8 * 0.25 = 2 samples for validation set (1 per class)
     'random_state': 42,
-    'early_stopping_patience': 10,
+    'early_stopping_patience': 15,
     'lr_scheduler_factor': 0.5,
-    'lr_scheduler_patience': 5,
+    'lr_scheduler_patience': 7,
 }
+
 
 def main():
     parser = argparse.ArgumentParser(description="Train a Bi-LSTM classifier for gesture recognition.")
