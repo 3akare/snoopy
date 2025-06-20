@@ -87,7 +87,8 @@ def main():
         return
 
     X = np.array(all_sequences, dtype=np.float32)
-    y = np.array(all_labels, dtype=np.int32)
+    y_sparse = np.array(all_labels, dtype=np.int32)
+    y = tf.keras.utils.to_categorical(y_sparse, num_classes=num_classes)
 
     X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=config['test_size'], random_state=config['random_state'], stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=config['validation_split'], random_state=config['random_state'], stratify=y_train_val)
@@ -105,7 +106,7 @@ def main():
     
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=config['learning_rate']),
-        loss='sparse_categorical_crossentropy',
+        loss='categorical_crossentropy',
         metrics=['accuracy', tf.keras.metrics.Precision(name='precision'), tf.keras.metrics.Recall(name='recall')]
     )
     model.summary(print_fn=logging.info)
@@ -137,12 +138,14 @@ def main():
     logging.info("--- Final Evaluation on Test Set ---")
     loss, accuracy, precision, recall = model.evaluate(X_test, y_test, batch_size=config['batch_size'], verbose=0)
     logging.info(f"Test Loss: {loss:.4f}, Test Accuracy: {accuracy:.4f}, Test Precision: {precision:.4f}, Test Recall: {recall:.4f}")
-
-    y_pred = np.argmax(model.predict(X_test), axis=1)
-    report = classification_report(y_test, y_pred, target_names=unique_labels, zero_division=0)
+    
+    y_pred_probs = model.predict(X_test)
+    y_pred_sparse = np.argmax(y_pred_probs, axis=1)
+    y_test_sparse = np.argmax(y_test, axis=1)
+    report = classification_report(y_test_sparse, y_pred_sparse, target_names=unique_labels, zero_division=0)
     logging.info(f"Classification Report:\n{report}")
     
-    cm = confusion_matrix(y_test, y_pred)
+    cm = confusion_matrix(y_test_sparse, y_pred_sparse)
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=unique_labels, yticklabels=unique_labels)
     plt.title('Confusion Matrix')
