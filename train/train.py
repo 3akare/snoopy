@@ -16,34 +16,30 @@ from sklearn.metrics import confusion_matrix, classification_report
 from train_utils import load_config, save_config, pad_or_truncate_sequence, data_generator
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# This feature dimension is calculated for Face Mesh (468*3) + Pose (17*3) + Hands (2*21*3)
-# 1404 + 51 + 126 = 1581
-FEATURE_DIM_V3 = (468 * 3) + (17 * 3) + (21 * 3 * 2)
+FEATURE_DIM_POSE_HANDS = (17 * 3) + (21 * 3 * 2)
 
 DEFAULT_CONFIG = {
     'data_dir': 'processed_data',
     'output_model_dir': '../lstm/models',
     'log_file_name': 'training_log.csv',
-    'epochs': 100,          # Keep epochs high to ensure it can overfit
-    'batch_size': 32,       # Smaller batch size for a tiny dataset
+    'epochs': 100,
+    'batch_size': 32,
     'learning_rate': 0.001,
     'sequence_length': 80,
-    'feature_dim': FEATURE_DIM_V3,
+    'feature_dim': FEATURE_DIM_POSE_HANDS,
     'hidden_size': 256,
     'num_layers': 2,
-    'dropout_rate': 0.5,   # Dropout must be OFF for this test
-    'test_size': 0.2,      # 10 * 0.2 = 2 samples for test set (1 per class)
-    'validation_split': 0.2, # 8 * 0.25 = 2 samples for validation set (1 per class)
+    'dropout_rate': 0.5,
+    'test_size': 0.2,
+    'validation_split': 0.2,
     'random_state': 42,
     'early_stopping_patience': 15,
     'lr_scheduler_factor': 0.5,
     'lr_scheduler_patience': 7,
 }
 
-
 def main():
-    parser = argparse.ArgumentParser(description="Train a Bi-LSTM classifier for gesture recognition.")
+    parser = argparse.ArgumentParser(description="Train a Bi-LSTM classifier on Pose and Hand data.")
     parser.add_argument('--config_file', type=str, default=None, help="Path to a JSON configuration file.")
     args = parser.parse_args()
 
@@ -88,13 +84,12 @@ def main():
         return
 
     X = np.array(all_sequences, dtype=np.float32)
-    y_sparse = np.array(all_labels, dtype=np.int32)
-    y = tf.keras.utils.to_categorical(y_sparse, num_classes=num_classes)
+    y = tf.keras.utils.to_categorical(np.array(all_labels, dtype=np.int32), num_classes=num_classes)
 
     X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=config['test_size'], random_state=config['random_state'], stratify=y)
     X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=config['validation_split'], random_state=config['random_state'], stratify=y_train_val)
 
-    logging.info(f"Total classes: {num_classes} -> {unique_labels}")
+    logging.info(f"TRAINING ON HANDS AND POSE ONLY. Feature dimension: {config['feature_dim']}")
     logging.info(f"Training samples: {X_train.shape[0]}, Validation samples: {X_val.shape[0]}, Testing samples: {X_test.shape[0]}")
 
     model = build_bilstm_classifier(
@@ -110,69 +105,22 @@ def main():
         loss='categorical_crossentropy',
         metrics=['accuracy', tf.keras.metrics.Precision(name='precision'), tf.keras.metrics.Recall(name='recall')]
     )
-    model.summary(print_fn=logging.info)
-
-    log_path = os.path.join(config['output_model_dir'], config['log_file_name'])
-    checkpoint_path = os.path.join(config['output_model_dir'], 'best_model_tf.keras')
     
     model_callbacks = [
-        callbacks.CSVLogger(log_path, append=True),
+        callbacks.CSVLogger(os.path.join(config['output_model_dir'], config['log_file_name']), append=True),
         callbacks.EarlyStopping(monitor='val_loss', patience=config['early_stopping_patience'], restore_best_weights=True),
-        callbacks.ReduceLROnPlateau(monitor='val_loss', factor=config['lr_scheduler_factor'], patience=config['lr_scheduler_patience'], min_lr=1e-7),
-        callbacks.ModelCheckpoint(filepath=checkpoint_path, monitor='val_loss', save_best_only=True)
+        callbacks.ReduceLROnPlateau(monitor='val_loss', factor=config['lr_scheduler_factor'], patience=config['lr_scheduler_patience']),
+        callbacks.ModelCheckpoint(filepath=os.path.join(config['output_model_dir'], 'best_model_tf.keras'), monitor='val_loss', save_best_only=True)
     ]
-
     train_gen = data_generator(X_train, y_train, config['batch_size'], augment=True)
     val_gen = data_generator(X_val, y_val, config['batch_size'], augment=False)
-
-    logging.info("--- Starting Training ---")
-    history = model.fit(
-        train_gen,
-        steps_per_epoch=max(1, len(X_train) // config['batch_size']),
-        validation_data=val_gen,
-        validation_steps=max(1, len(X_val) // config['batch_size']),
-        epochs=config['epochs'],
-        callbacks=model_callbacks,
-        verbose=1
-    )
-
+    history = model.fit(train_gen, steps_per_epoch=max(1, len(X_train) // config['batch_size']), validation_data=val_gen, validation_steps=max(1, len(X_val) // config['batch_size']), epochs=config['epochs'], callbacks=model_callbacks, verbose=1)
     logging.info("--- Final Evaluation on Test Set ---")
-    loss, accuracy, precision, recall = model.evaluate(X_test, y_test, batch_size=config['batch_size'], verbose=0)
-    logging.info(f"Test Loss: {loss:.4f}, Test Accuracy: {accuracy:.4f}, Test Precision: {precision:.4f}, Test Recall: {recall:.4f}")
-    
     y_pred_probs = model.predict(X_test)
     y_pred_sparse = np.argmax(y_pred_probs, axis=1)
     y_test_sparse = np.argmax(y_test, axis=1)
     report = classification_report(y_test_sparse, y_pred_sparse, target_names=unique_labels, zero_division=0)
     logging.info(f"Classification Report:\n{report}")
-    
-    cm = confusion_matrix(y_test_sparse, y_pred_sparse)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=unique_labels, yticklabels=unique_labels)
-    plt.title('Confusion Matrix')
-    plt.ylabel('True Label')
-    plt.xlabel('Predicted Label')
-    plt.tight_layout()
-    plt.savefig(os.path.join(config['output_model_dir'], 'confusion_matrix.png'))
-    logging.info(f"Confusion matrix saved to {config['output_model_dir']}/confusion_matrix.png")
-
-    fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-    fig.suptitle('Training and Validation Metrics', fontsize=16)
-    metric_keys = ['loss', 'accuracy', 'precision', 'recall']
-    for i, metric in enumerate(metric_keys):
-        ax = axes[i//2, i%2]
-        ax.plot(history.history[metric], label=f'Training {metric.capitalize()}')
-        ax.plot(history.history[f'val_{metric}'], label=f'Validation {metric.capitalize()}')
-        ax.set_title(f'Model {metric.capitalize()}')
-        ax.set_ylabel(metric.capitalize())
-        ax.set_xlabel('Epoch')
-        ax.legend(loc='best')
-        ax.grid(True)
-    
-    history_plot_path = os.path.join(config['output_model_dir'], 'training_history_metrics.png')
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.savefig(history_plot_path)
-    logging.info(f"Training history plots saved to {history_plot_path}")
 
 if __name__ == "__main__":
     main()

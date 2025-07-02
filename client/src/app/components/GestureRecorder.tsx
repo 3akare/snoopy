@@ -21,7 +21,6 @@ export default function GestureRecorder() {
     const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
     const [isPlaying, setIsPlaying] = useState(false);
 
-    const [faceDetected, setFaceDetected] = useState(false);
     const [poseDetected, setPoseDetected] = useState(false);
     const [handsDetected, setHandsDetected] = useState<number>(0);
     const [keypointsCount, setKeypointsCount] = useState<number>(0);
@@ -37,25 +36,14 @@ export default function GestureRecorder() {
     const wordsRef = useRef<string[]>([]);
 
     const processResults = useCallback((results: HolisticModule.Results) => {
-        let isFaceDetected = false, isPoseDetected = false, numHandsDetected = 0;
+        let isPoseDetected = false, numHandsDetected = 0;
 
-        const NUM_FACE_FEATURES = 468 * 3;
         const NUM_POSE_FEATURES = POSE_LANDMARKS_TO_EXTRACT.length * 3;
         const NUM_HAND_FEATURES = 21 * 3;
 
-        let face_kps = Array(NUM_FACE_FEATURES).fill(0.0);
         let pose_kps = Array(NUM_POSE_FEATURES).fill(0.0);
         let left_hand_kps = Array(NUM_HAND_FEATURES).fill(0.0);
         let right_hand_kps = Array(NUM_HAND_FEATURES).fill(0.0);
-
-        if (results.faceLandmarks) {
-            isFaceDetected = true;
-            const refPoint = results.faceLandmarks[1]; // Nose bridge
-            if (refPoint) {
-                const { x: refX, y: refY, z: refZ } = refPoint;
-                face_kps = results.faceLandmarks.flatMap((lm) => [lm.x - refX, lm.y - refY, lm.z - refZ]);
-            }
-        }
 
         if (results.poseLandmarks) {
             isPoseDetected = true;
@@ -84,12 +72,11 @@ export default function GestureRecorder() {
             }
         });
         
-        setFaceDetected(isFaceDetected);
         setPoseDetected(isPoseDetected);
         setHandsDetected(numHandsDetected);
 
-        if (state === "recording" && (isFaceDetected || isPoseDetected || numHandsDetected > 0)) {
-            const combinedKeypoints = [...face_kps, ...pose_kps, ...left_hand_kps, ...right_hand_kps];
+        if (state === "recording" && (isPoseDetected || numHandsDetected > 0)) {
+            const combinedKeypoints = [...pose_kps, ...left_hand_kps, ...right_hand_kps];
             recordedKeypointsRef.current.push(combinedKeypoints);
             setKeypointsCount(recordedKeypointsRef.current.length);
         }
@@ -132,7 +119,7 @@ export default function GestureRecorder() {
 
     const startRecording = useCallback(async () => {
         setError(""); setTranslatedText(""); setHighlightedIndex(-1); setIsPlaying(false);
-        setFaceDetected(false); setPoseDetected(false); setHandsDetected(0); setKeypointsCount(0);
+        setPoseDetected(false); setHandsDetected(0); setKeypointsCount(0);
         recordedKeypointsRef.current = [];
         setState("initializing");
 
@@ -175,7 +162,6 @@ export default function GestureRecorder() {
     }, []);
 
     const sendRecording = useCallback(async () => {
-        console.log(recordedKeypointsRef.current);
         if (recordedKeypointsRef.current.length === 0) {
             toast.error("No keypoints to send."); return;
         }
@@ -251,7 +237,7 @@ export default function GestureRecorder() {
         if (typeof window.speechSynthesis !== 'undefined') window.speechSynthesis.cancel();
         stopRecording();
         setTranslatedText(""); setError(""); setHighlightedIndex(-1); setIsPlaying(false);
-        setFaceDetected(false); setPoseDetected(false); setHandsDetected(0); setKeypointsCount(0);
+        setPoseDetected(false); setHandsDetected(0); setKeypointsCount(0);
         setState("default");
     }, [stopRecording]);
 
@@ -272,7 +258,6 @@ export default function GestureRecorder() {
                 {(state === "recording" || state === "initializing") && (
                     <div className="fixed top-4 left-4 bg-black bg-opacity-80 text-white p-3 rounded text-sm z-50 font-mono">
                         <div>Status: <span className="text-green-400">{state}</span></div>
-                        <div>Face: <span className={faceDetected ? "text-green-400" : "text-red-400"}>{faceDetected ? "Detected" : "None"}</span></div>
                         <div>Pose: <span className={poseDetected ? "text-green-400" : "text-red-400"}>{poseDetected ? "Detected" : "None"}</span></div>
                         <div>Hands: <span className="text-blue-400">{handsDetected}</span></div>
                         <div>Frames: <span className="text-yellow-400">{keypointsCount}</span></div>

@@ -6,8 +6,7 @@ def build_bilstm_classifier(input_shape, hidden_size, num_layers, output_dim, dr
     Builds a Bidirectional LSTM classifier model using the Keras Functional API.
     """
     model_input = keras.Input(shape=input_shape)
-    x = model_input
-
+    x = layers.Masking(mask_value=0.0)(model_input)
     for i in range(num_layers):
         return_sequences = True if i < num_layers - 1 else False
         x = layers.Bidirectional(

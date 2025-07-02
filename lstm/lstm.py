@@ -6,7 +6,6 @@ import logging
 import numpy as np
 import tensorflow as tf
 from concurrent import futures
-from collections import deque
 from utils import pad_or_truncate_sequence
 import prediction_services_pb2
 import prediction_services_pb2_grpc
@@ -16,15 +15,15 @@ MODEL_DIR = os.path.dirname(__file__)
 MODEL_PATH = os.path.join(MODEL_DIR, 'models', 'best_model_tf.keras')
 LABEL_MAP_PATH = os.path.join(MODEL_DIR, 'models', 'label_map.json')
 
-FEATURE_DIM = (468 * 3) + (17 * 3) + (21 * 3 * 2) # 1581
+FEATURE_DIM = (17 * 3) + (21 * 3 * 2)
 SEQUENCE_LENGTH = 80
 
-# Use a smaller window size and stride for continuous recognition
 WINDOW_SIZE = 30 
 WINDOW_STRIDE = 10
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# --- Load Model and Label Map ---
 try:
     with open(LABEL_MAP_PATH, 'r') as f:
         idx_to_label_str_keys = json.load(f)
@@ -32,7 +31,7 @@ try:
     model = tf.keras.models.load_model(MODEL_PATH)
     dummy_input = np.zeros((1, SEQUENCE_LENGTH, FEATURE_DIM), dtype=np.float32)
     model.predict(dummy_input, verbose=0)
-    logging.info(f"Successfully loaded model and label map.")
+    logging.info(f"Successfully loaded model and label map for {FEATURE_DIM}-dimensional input.")
 except Exception as e:
     logging.critical(f"FATAL ERROR: Could not load resources. Exiting. Error: {e}", exc_info=True)
     sys.exit(1)
@@ -65,7 +64,6 @@ class LstmPredictionService(prediction_services_pb2_grpc.LstmServiceServicer):
             for i in range(0, total_frames - WINDOW_SIZE + 1, WINDOW_STRIDE):
                 window = live_sequence_np[i : i + WINDOW_SIZE, :]
                 
-                # The model expects a fixed length, so we pad our smaller window
                 sequence_to_predict = pad_or_truncate_sequence(window, SEQUENCE_LENGTH)
                 sequence_to_predict = np.expand_dims(sequence_to_predict, axis=0)
                 
@@ -73,18 +71,15 @@ class LstmPredictionService(prediction_services_pb2_grpc.LstmServiceServicer):
                 predicted_index = np.argmax(prediction_probs)
                 predicted_label = IDX_TO_LABEL.get(predicted_index, "_blank_")
 
-                # Only add confident predictions
                 if np.max(prediction_probs) > 0.6:
                     raw_predictions.append(predicted_label)
             
             final_sentence = []
             if raw_predictions:
-                # Add the first non-blank prediction
                 if raw_predictions[0] != '_blank_':
                     final_sentence.append(raw_predictions[0])
                 
-                # Add subsequent predictions only if they are different from the last one added
-                for pred in raw_predictions:
+                for pred in raw_predictions[1:]:
                     if pred != '_blank_' and (not final_sentence or pred != final_sentence[-1]):
                         final_sentence.append(pred)
 
@@ -102,11 +97,14 @@ class LstmPredictionService(prediction_services_pb2_grpc.LstmServiceServicer):
 def serve():
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=(os.cpu_count() or 4)),
-        options=[('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH), ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH)]
+        options=[
+            ('grpc.max_receive_message_length', MAX_MESSAGE_LENGTH),
+            ('grpc.max_send_message_length', MAX_MESSAGE_LENGTH)
+        ]
     )
     prediction_services_pb2_grpc.add_LstmServiceServicer_to_server(LstmPredictionService(), server)
     server.add_insecure_port("[::]:50051")
-    logging.info("LSTM gRPC Server started on port 50051 with Sliding Window recognition.")
+    logging.info("LSTM gRPC Server started on port 50051.")
     server.start()
     server.wait_for_termination()
 

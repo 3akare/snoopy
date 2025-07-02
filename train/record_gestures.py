@@ -8,15 +8,14 @@ import mediapipe as mp
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # MediaPipe Solution Objects
-mp_face_mesh = mp.solutions.face_mesh
 mp_hands = mp.solutions.hands
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 
 # Configuration
-MIN_DETECTION_CONFIDENCE = 0.7
-MIN_TRACKING_CONFIDENCE = 0.7
+MIN_DETECTION_CONFIDENCE = 0.5
+MIN_TRACKING_CONFIDENCE = 0.5
 RESOLUTION_WIDTH = 1280
 RESOLUTION_HEIGHT = 720
 DEFAULT_DURATION = 10
@@ -24,8 +23,7 @@ DEFAULT_NUM_RECORDINGS = 10
 
 def record_gestures(label: str, num_recordings: int, duration: int, output_dir: str):
     """
-    Records videos of a sign gesture, displaying real-time Face, Pose, and Hand landmarks.
-    The saved video is the clean, original footage without any drawings.
+    Records videos of a sign gesture, displaying real-time Pose and Hand landmarks.
     """
     label_dir = os.path.join(output_dir, label)
     os.makedirs(label_dir, exist_ok=True)
@@ -41,20 +39,15 @@ def record_gestures(label: str, num_recordings: int, duration: int, output_dir: 
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
     fps = int(cap.get(cv2.CAP_PROP_FPS))
-    if fps == 0:
-        fps = 30
+    if fps == 0: fps = 30
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     logging.info(f"Webcam initialized: {int(cap.get(3))}x{int(cap.get(4))} @ {fps} FPS")
 
-    # Custom Drawing Styles for a beautiful overlay
     pose_style = mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=2)
-    face_tesselation_style = mp_drawing.DrawingSpec(color=(180, 180, 180), thickness=1, circle_radius=1)
-    face_contour_style = mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=2, circle_radius=2)
     left_hand_style = mp_drawing.DrawingSpec(color=(252, 12, 125), thickness=2, circle_radius=2)
     right_hand_style = mp_drawing.DrawingSpec(color=(12, 252, 220), thickness=2, circle_radius=2)
 
-    with mp_face_mesh.FaceMesh(max_num_faces=1, min_detection_confidence=MIN_DETECTION_CONFIDENCE, min_tracking_confidence=MIN_TRACKING_CONFIDENCE) as face_mesh, \
-         mp_hands.Hands(min_detection_confidence=MIN_DETECTION_CONFIDENCE, min_tracking_confidence=MIN_TRACKING_CONFIDENCE, max_num_hands=2) as hands, \
+    with mp_hands.Hands(min_detection_confidence=MIN_DETECTION_CONFIDENCE, min_tracking_confidence=MIN_TRACKING_CONFIDENCE, max_num_hands=2) as hands, \
          mp_pose.Pose(min_detection_confidence=MIN_DETECTION_CONFIDENCE, min_tracking_confidence=MIN_TRACKING_CONFIDENCE) as pose:
 
         for i in range(1, num_recordings + 1):
@@ -73,20 +66,11 @@ def record_gestures(label: str, num_recordings: int, duration: int, output_dir: 
                 display_frame = frame.copy()
                 image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-                results_face = face_mesh.process(image_rgb)
                 results_hands = hands.process(image_rgb)
                 results_pose = pose.process(image_rgb)
 
-                # Draw Face Mesh
-                if results_face.multi_face_landmarks:
-                    for face_landmarks in results_face.multi_face_landmarks:
-                        mp_drawing.draw_landmarks(display_frame, face_landmarks, mp_face_mesh.FACEMESH_TESSELATION, None, face_tesselation_style)
-                        mp_drawing.draw_landmarks(display_frame, face_landmarks, mp_face_mesh.FACEMESH_CONTOURS, None, face_contour_style)
+                mp_drawing.draw_landmarks(display_frame, results_pose.pose_landmarks, mp_pose.POSE_CONNECTIONS, landmark_drawing_spec=pose_style, connection_drawing_spec=pose_style)
 
-                # Draw Pose
-                mp_drawing.draw_landmarks(display_frame, results_pose.pose_landmarks, mp_pose.POSE_CONNECTIONS, landmark_drawing_spec=pose_style)
-
-                # Draw Hands with different colors
                 if results_hands.multi_hand_landmarks and results_hands.multi_handedness:
                     for idx, hand_landmarks in enumerate(results_hands.multi_hand_landmarks):
                         hand_label = results_hands.multi_handedness[idx].classification[0].label
@@ -97,15 +81,12 @@ def record_gestures(label: str, num_recordings: int, duration: int, output_dir: 
                 out.write(frame)
 
                 if cv2.waitKey(1) & 0xFF == ord('q'):
-                    logging.info("'q' pressed. Stopping all recordings.")
                     quit_flag = True
                     break
-
             out.release()
             logging.info(f"Saved clean video to: {output_filepath}")
 
-            if quit_flag:
-                break
+            if quit_flag: break
 
     cap.release()
     cv2.destroyAllWindows()
@@ -113,10 +94,10 @@ def record_gestures(label: str, num_recordings: int, duration: int, output_dir: 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Record gesture videos with real-time landmark visualization.")
-    parser.add_argument('--label', type=str, required=True, help="Label of the gesture to record (e.g., 'hello').")
-    parser.add_argument('--num_recordings', type=int, default=DEFAULT_NUM_RECORDINGS, help="Number of videos to record.")
-    parser.add_argument('--duration', type=int, default=DEFAULT_DURATION, help="Duration of each recording in seconds.")
-    parser.add_argument('--output_dir', type=str, default='raw_videos', help="Base directory to save the clean videos.")
+    parser.add_argument('--label', type=str, required=True, help="Label of the gesture to record.")
+    parser.add_argument('--num_recordings', type=int, default=DEFAULT_NUM_RECORDINGS)
+    parser.add_argument('--duration', type=int, default=DEFAULT_DURATION)
+    parser.add_argument('--output_dir', type=str, default='raw_videos')
     args = parser.parse_args()
 
     record_gestures(args.label, args.num_recordings, args.duration, args.output_dir)

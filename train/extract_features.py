@@ -10,39 +10,27 @@ import mediapipe as mp
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # MediaPipe Solution Objects
-mp_face_mesh = mp.solutions.face_mesh
 mp_hands = mp.solutions.hands
 mp_pose = mp.solutions.pose
 
 # Define Landmark Indices and Feature Dimensions
 POSE_LANDMARKS_TO_EXTRACT = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
 
-NUM_FACE_FEATURES = 468 * 3
 NUM_POSE_FEATURES = len(POSE_LANDMARKS_TO_EXTRACT) * 3
 NUM_HAND_FEATURES = 21 * 3
-TOTAL_FEATURES = NUM_FACE_FEATURES + NUM_POSE_FEATURES + (NUM_HAND_FEATURES * 2)
+TOTAL_FEATURES = NUM_POSE_FEATURES + (NUM_HAND_FEATURES * 2) # 51 + 126 = 177
 
 # MediaPipe Model Configuration
 MIN_DETECTION_CONFIDENCE = 0.5
 MIN_TRACKING_CONFIDENCE = 0.5
 
-def extract_combined_features(results_face, results_hands, results_pose) -> np.ndarray:
+def extract_combined_features(results_hands, results_pose) -> np.ndarray:
     """
-    Extracts, normalizes, and combines features from Face, Pose, and Hands models.
+    Extracts, normalizes, and combines features from Pose and Hands models.
     """
-    face_kps = np.zeros(NUM_FACE_FEATURES, dtype=np.float32)
     pose_kps = np.zeros(NUM_POSE_FEATURES, dtype=np.float32)
     left_hand_kps = np.zeros(NUM_HAND_FEATURES, dtype=np.float32)
     right_hand_kps = np.zeros(NUM_HAND_FEATURES, dtype=np.float32)
-
-    if results_face.multi_face_landmarks:
-        face_landmarks = results_face.multi_face_landmarks[0].landmark
-        ref_point = face_landmarks[1]
-        ref_x, ref_y, ref_z = ref_point.x, ref_point.y, ref_point.z
-        face_coords = []
-        for lm in face_landmarks:
-            face_coords.extend([lm.x - ref_x, lm.y - ref_y, lm.z - ref_z])
-        face_kps = np.array(face_coords, dtype=np.float32)
 
     if results_pose.pose_landmarks:
         pose_landmarks = results_pose.pose_landmarks.landmark
@@ -67,7 +55,7 @@ def extract_combined_features(results_face, results_hands, results_pose) -> np.n
             elif handedness == "Right":
                 right_hand_kps = np.array(hand_coords, dtype=np.float32)
 
-    return np.concatenate([face_kps, pose_kps, left_hand_kps, right_hand_kps])
+    return np.concatenate([pose_kps, left_hand_kps, right_hand_kps])
 
 def process_video(video_path: str, output_filepath: str):
     """
@@ -80,29 +68,25 @@ def process_video(video_path: str, output_filepath: str):
         return False
 
     valid_frames = []
-    with mp_face_mesh.FaceMesh(max_num_faces=1, min_detection_confidence=MIN_DETECTION_CONFIDENCE, min_tracking_confidence=MIN_TRACKING_CONFIDENCE) as face_mesh, \
-         mp_hands.Hands(min_detection_confidence=MIN_DETECTION_CONFIDENCE, min_tracking_confidence=MIN_TRACKING_CONFIDENCE, max_num_hands=2) as hands, \
+    with mp_hands.Hands(min_detection_confidence=MIN_DETECTION_CONFIDENCE, min_tracking_confidence=MIN_TRACKING_CONFIDENCE, max_num_hands=2) as hands, \
          mp_pose.Pose(min_detection_confidence=MIN_DETECTION_CONFIDENCE, min_tracking_confidence=MIN_TRACKING_CONFIDENCE) as pose:
         
         while cap.isOpened():
             ret, frame = cap.read()
-            if not ret:
-                break
+            if not ret: break
 
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results_face = face_mesh.process(rgb_frame)
             results_hands = hands.process(rgb_frame)
             results_pose = pose.process(rgb_frame)
             
-            combined_keypoints = extract_combined_features(results_face, results_hands, results_pose)
+            combined_keypoints = extract_combined_features(results_hands, results_pose)
             
-            # Only append frames that have at least one non-zero value
             if combined_keypoints.any():
                 valid_frames.append(combined_keypoints)
     cap.release()
 
     if not valid_frames:
-        logging.warning(f"No valid frames with detected keypoints found in {video_path}. Skipping save.")
+        logging.warning(f"No valid frames with detected keypoints found in {video_path}. Skipping.")
         return False
 
     os.makedirs(os.path.dirname(output_filepath), exist_ok=True)
@@ -115,10 +99,10 @@ def process_video(video_path: str, output_filepath: str):
         return False
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract Face, Pose, and Hand keypoints from videos.")
-    parser.add_argument('--input_dir', type=str, default='raw_videos', help="Directory with raw videos.")
-    parser.add_argument('--output_dir', type=str, default='processed_data', help="Directory to save .npy files.")
-    parser.add_argument('--force', action='store_true', help="Force reprocessing of all videos, even if output files exist.")
+    parser = argparse.ArgumentParser(description="Extract Pose and Hand keypoints from videos.")
+    parser.add_argument('--input_dir', type=str, default='raw_videos')
+    parser.add_argument('--output_dir', type=str, default='processed_data')
+    parser.add_argument('--force', action='store_true', help="Force reprocessing of all videos.")
     args = parser.parse_args()
 
     os.makedirs(args.output_dir, exist_ok=True)
@@ -151,9 +135,7 @@ def main():
 
     end_time = time.time()
     logging.info("--- Processing Complete ---")
-    logging.info(f"Videos processed: {processed_count}")
-    logging.info(f"Videos skipped: {skipped_count}")
-    logging.info(f"Videos failed: {failed_count}")
+    logging.info(f"Videos processed: {processed_count}, Skipped: {skipped_count}, Failed: {failed_count}")
     logging.info(f"Total time: {end_time - start_time:.2f} seconds.")
 
 if __name__ == "__main__":
